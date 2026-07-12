@@ -8,23 +8,24 @@ body {
 }
 
 /*
-  Authenticated shell: desktop sidebar is fixed; main content offsets by --sidebar-width.
-  Prevents dashboard content from sitting under an expanded sidebar.
+  Authenticated shell: spacer + flex main (see AppShell.tsx).
+  Keep main from growing past the viewport beside the sidebar spacer.
 */
 .app-shell-main {
   width: 100%;
   max-width: 100%;
+  min-width: 0;
 }
 
 @media (min-width: 1024px) {
-  .app-shell-main[data-sidebar-offset='true'] {
-    margin-left: var(--sidebar-width, 288px);
-    width: calc(100% - var(--sidebar-width, 288px));
-    max-width: calc(100% - var(--sidebar-width, 288px));
-    transition:
-      margin-left 300ms ease-in-out,
-      width 300ms ease-in-out,
-      max-width 300ms ease-in-out;
+  .app-shell-main {
+    width: auto;
+    flex: 1 1 0%;
+    max-width: 100%;
+  }
+
+  .app-shell-sidebar-spacer {
+    flex-shrink: 0;
   }
 }
 

@@ -3,11 +3,7 @@
 import { Suspense } from 'react';
 import { usePathname } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
-import {
-  SIDEBAR_WIDTH_COLLAPSED,
-  SIDEBAR_WIDTH_EXPANDED,
-  useUIStore,
-} from '@/store/uiStore';
+import { SIDEBAR_WIDTH_COLLAPSED, SIDEBAR_WIDTH_EXPANDED, useUIStore } from '@/store/uiStore';
 
 const PUBLIC_EXACT = new Set(['/']);
 const PUBLIC_PREFIXES = ['/login', '/sign-in', '/accept-invite', '/access-denied'];
@@ -24,35 +20,28 @@ function AuthenticatedShell({ children }: { children: React.ReactNode }) {
   const sidebarWidth = collapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED;
 
   return (
-    <div
-      className="relative min-h-screen w-full min-w-0 bg-slate-50"
-      style={{ ['--sidebar-width' as string]: `${sidebarWidth}px` }}
-    >
-      <Suspense
-        fallback={
-          <div
-            className="hidden lg:block fixed top-0 left-0 z-40 h-screen border-r border-slate-200 bg-white"
-            style={{ width: SIDEBAR_WIDTH_EXPANDED }}
-            aria-hidden
-          />
-        }
-      >
+    <div className="min-h-screen w-full min-w-0 overflow-x-hidden bg-slate-50">
+      <Suspense fallback={null}>
         <Sidebar />
       </Suspense>
 
       {/*
-        Desktop: fixed sidebar + main offset via --sidebar-width (no overlap on expand/collapse).
-        Mobile: full-width page + overlay drawer.
+        Desktop: in-flow spacer reserves sidebar width; fixed sidebar draws over spacer.
+        Main is a flex sibling — it can never sit under the expanded sidebar.
+        Mobile: no spacer; full-width main + overlay drawer.
       */}
-      <main
-        className="app-shell-main min-h-screen min-w-0 overflow-x-hidden overflow-y-auto pt-14 lg:pt-0"
-        data-sidebar-offset="true"
-        data-sidebar-collapsed={collapsed ? 'true' : 'false'}
-      >
-        <div className="min-h-full w-full min-w-0 max-w-full p-4 sm:p-6 lg:p-8 pb-20 lg:max-w-[1600px] lg:mx-auto">
-          {children}
-        </div>
-      </main>
+      <div className="flex min-h-screen w-full min-w-0">
+        <div
+          className="app-shell-sidebar-spacer hidden shrink-0 transition-[width] duration-300 ease-in-out lg:block"
+          style={{ width: sidebarWidth }}
+          aria-hidden="true"
+        />
+        <main className="app-shell-main min-h-screen min-w-0 flex-1 overflow-x-hidden overflow-y-auto pt-14 lg:pt-0">
+          <div className="min-h-full w-full min-w-0 max-w-full p-4 sm:p-6 lg:p-8 pb-20">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

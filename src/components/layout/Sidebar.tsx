@@ -251,9 +251,9 @@ export default function Sidebar() {
         <span className="text-2xl">☰</span>
       </Button>
 
-      {/* Desktop: fixed sidebar — AppShell main uses matching left offset */}
+      {/* Desktop: fixed over AppShell spacer column (same width) */}
       <aside
-        className="hidden lg:flex fixed top-0 left-0 z-40 h-screen shrink-0 flex-col bg-white border-r border-slate-200 transition-[width] duration-300 ease-in-out overflow-hidden"
+        className="app-shell-sidebar hidden lg:flex fixed top-0 left-0 z-40 h-screen shrink-0 flex-col bg-white border-r border-slate-200 shadow-sm transition-[width] duration-300 ease-in-out overflow-hidden"
         style={{ width: widthPx }}
         aria-label="Main navigation"
       >
