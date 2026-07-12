@@ -1,4 +1,14 @@
-import { supabase } from '@/lib/supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+let supabaseClient: SupabaseClient | null = null;
+
+async function getSupabase() {
+  if (!supabaseClient) {
+    const { supabase } = await import('@/lib/supabase');
+    supabaseClient = supabase;
+  }
+  return supabaseClient;
+}
 
 export type ReportMetrics = {
   totalRecords: number;
@@ -32,6 +42,7 @@ function monthLabel(isoDate: string): string {
 }
 
 export async function fetchReportMetrics(tenantId: string): Promise<ReportMetrics> {
+  const supabase = await getSupabase();
   const [totalRes, matchedRes, unmatchedRes, pendingRes, anomalyRes, unmatchedAmountRes] = await Promise.all([
     supabase.from('master_ledger').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
     supabase.from('master_ledger').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'matched'),
@@ -84,6 +95,7 @@ export async function fetchReportMetrics(tenantId: string): Promise<ReportMetric
 }
 
 export async function fetchTrendData(tenantId: string): Promise<TrendPoint[]> {
+  const supabase = await getSupabase();
   const { data } = await supabase
     .from('master_ledger')
     .select('transaction_date, status, amount')
@@ -116,6 +128,7 @@ export async function fetchTrendData(tenantId: string): Promise<TrendPoint[]> {
 }
 
 export async function fetchProductBreakdown(tenantId: string): Promise<ProductBreakdown[]> {
+  const supabase = await getSupabase();
   const { data } = await supabase
     .from('master_ledger')
     .select('product_type, amount')
