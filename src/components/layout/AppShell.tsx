@@ -2,7 +2,11 @@
 
 import { Suspense } from 'react';
 import { usePathname } from 'next/navigation';
-import Sidebar from '@/components/layout/Sidebar';
+import {
+  SidebarMobileChrome,
+  SidebarNav,
+  SidebarNavFallback,
+} from '@/components/layout/Sidebar';
 import { SIDEBAR_WIDTH_COLLAPSED, SIDEBAR_WIDTH_EXPANDED, useUIStore } from '@/store/uiStore';
 
 const PUBLIC_EXACT = new Set(['/']);
@@ -21,21 +25,23 @@ function AuthenticatedShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen w-full min-w-0 overflow-x-hidden bg-slate-50">
-      <Suspense fallback={null}>
-        <Sidebar />
-      </Suspense>
+      <SidebarMobileChrome />
 
       {/*
-        Desktop: in-flow spacer reserves sidebar width; fixed sidebar draws over spacer.
-        Main is a flex sibling — it can never sit under the expanded sidebar.
-        Mobile: no spacer; full-width main + overlay drawer.
+        Desktop: sidebar is a direct flex child (in document flow, not fixed).
+        Main content starts immediately after the sidebar column — no overlap possible.
       */}
       <div className="flex min-h-screen w-full min-w-0">
-        <div
-          className="app-shell-sidebar-spacer hidden shrink-0 transition-[width] duration-300 ease-in-out lg:block"
+        <aside
+          className="app-shell-sidebar hidden shrink-0 flex-col bg-white border-r border-slate-200 shadow-sm transition-[width] duration-300 ease-in-out overflow-hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:max-h-screen lg:z-40"
           style={{ width: sidebarWidth }}
-          aria-hidden="true"
-        />
+          aria-label="Main navigation"
+        >
+          <Suspense fallback={<SidebarNavFallback />}>
+            <SidebarNav />
+          </Suspense>
+        </aside>
+
         <main className="app-shell-main min-h-screen min-w-0 flex-1 overflow-x-hidden overflow-y-auto pt-14 lg:pt-0">
           <div className="min-h-full w-full min-w-0 max-w-full p-4 sm:p-6 lg:p-8 pb-20">
             {children}

@@ -28,11 +28,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/app/providers';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
-import {
-  SIDEBAR_WIDTH_COLLAPSED,
-  SIDEBAR_WIDTH_EXPANDED,
-  useUIStore,
-} from '@/store/uiStore';
+import { useUIStore } from '@/store/uiStore';
 
 const mainNav = [
   { href: '/', label: 'Home', icon: LayoutDashboard },
@@ -52,7 +48,7 @@ const quickAccess = [
   { href: '/resolver', label: 'AI Resolver', icon: Target },
 ];
 
-export default function Sidebar() {
+function useSidebarState() {
   const [isClient, setIsClient] = useState(false);
 
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
@@ -70,7 +66,6 @@ export default function Sidebar() {
     setIsClient(true);
   }, []);
 
-  // Close mobile drawer on route change
   useEffect(() => {
     setMobileSidebarOpen(false);
   }, [pathname, searchParams, setMobileSidebarOpen]);
@@ -78,7 +73,6 @@ export default function Sidebar() {
   const showAuthUi = isClient && !loading;
   const isAdmin = showAuthUi && hasPermission('admin');
   const activeTab = isClient ? searchParams.get('tab') : null;
-  const widthPx = collapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED;
 
   const currentUser = {
     name: showAuthUi
@@ -94,6 +88,33 @@ export default function Sidebar() {
     window.location.href = '/login';
   };
 
+  return {
+    collapsed,
+    toggleSidebar,
+    isMobileOpen,
+    setMobileSidebarOpen,
+    toggleMobileSidebar,
+    pathname,
+    activeTab,
+    isAdmin,
+    currentUser,
+    handleLogout,
+  };
+}
+
+/** Desktop nav body — rendered inside AppShell flex column (in document flow). */
+export function SidebarNav() {
+  const {
+    collapsed,
+    toggleSidebar,
+    setMobileSidebarOpen,
+    pathname,
+    activeTab,
+    isAdmin,
+    currentUser,
+    handleLogout,
+  } = useSidebarState();
+
   const navLinkClass = (isActive: boolean) =>
     `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
       isActive
@@ -101,9 +122,8 @@ export default function Sidebar() {
         : 'text-slate-700 hover:bg-slate-100'
     }`;
 
-  const sidebarInner = (
+  return (
     <>
-      {/* Logo Header */}
       <div className="h-20 px-4 border-b flex items-center justify-between bg-white shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 shrink-0 rounded-2xl bg-emerald-600 flex items-center justify-center shadow">
@@ -120,7 +140,7 @@ export default function Sidebar() {
         <Button
           variant="ghost"
           size="icon"
-          className="hidden lg:flex shrink-0"
+          className="shrink-0"
           onClick={toggleSidebar}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
@@ -237,10 +257,37 @@ export default function Sidebar() {
       </div>
     </>
   );
+}
+
+export function SidebarNavFallback() {
+  return (
+    <div className="flex h-full flex-col animate-pulse">
+      <div className="h-20 border-b bg-slate-100" />
+      <div className="flex-1 space-y-2 p-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-10 rounded-xl bg-slate-100" />
+        ))}
+      </div>
+      <div className="h-20 border-t bg-slate-100" />
+    </div>
+  );
+}
+
+/** Mobile hamburger + overlay drawer (does not affect desktop flex layout). */
+export function SidebarMobileChrome() {
+  const {
+    isMobileOpen,
+    toggleMobileSidebar,
+    setMobileSidebarOpen,
+    pathname,
+    activeTab,
+    isAdmin,
+    currentUser,
+    handleLogout,
+  } = useSidebarState();
 
   return (
     <>
-      {/* Mobile hamburger */}
       <Button
         variant="outline"
         size="icon"
@@ -251,34 +298,20 @@ export default function Sidebar() {
         <span className="text-2xl">☰</span>
       </Button>
 
-      {/* Desktop: fixed over AppShell spacer column (same width) */}
-      <aside
-        className="app-shell-sidebar hidden lg:flex fixed top-0 left-0 z-40 h-screen shrink-0 flex-col bg-white border-r border-slate-200 shadow-sm transition-[width] duration-300 ease-in-out overflow-hidden"
-        style={{ width: widthPx }}
-        aria-label="Main navigation"
-      >
-        {sidebarInner}
-      </aside>
-
-      {/* Mobile: overlay drawer (does not push content) */}
       <aside
         className={`lg:hidden fixed top-0 left-0 z-[250] h-screen flex flex-col bg-white border-r border-slate-200 shadow-2xl transition-transform duration-300 ease-in-out w-[288px] ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         aria-label="Mobile navigation"
       >
-        {/* Force expanded labels on mobile drawer */}
-        <div className="contents [&_.truncate]:max-w-none">
-          {/* Re-render expanded: temporarily override collapsed for mobile by cloning structure */}
-          <MobileSidebarBody
-            pathname={pathname}
-            activeTab={activeTab}
-            isAdmin={isAdmin}
-            currentUser={currentUser}
-            onNavigate={() => setMobileSidebarOpen(false)}
-            onLogout={handleLogout}
-          />
-        </div>
+        <MobileSidebarBody
+          pathname={pathname}
+          activeTab={activeTab}
+          isAdmin={isAdmin}
+          currentUser={currentUser}
+          onNavigate={() => setMobileSidebarOpen(false)}
+          onLogout={handleLogout}
+        />
       </aside>
 
       {isMobileOpen && (
@@ -292,7 +325,6 @@ export default function Sidebar() {
   );
 }
 
-/** Always-expanded nav body for the mobile drawer */
 function MobileSidebarBody({
   pathname,
   activeTab,
@@ -428,3 +460,5 @@ function MobileSidebarBody({
     </>
   );
 }
+
+export default SidebarNav;

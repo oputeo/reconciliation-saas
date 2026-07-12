@@ -8,9 +8,12 @@ body {
 }
 
 /*
-  Authenticated shell: spacer + flex main (see AppShell.tsx).
-  Keep main from growing past the viewport beside the sidebar spacer.
+  Authenticated shell: in-flow sidebar column + flex main (see AppShell.tsx).
 */
+.app-shell-sidebar {
+  flex-shrink: 0;
+}
+
 .app-shell-main {
   width: 100%;
   max-width: 100%;
@@ -22,10 +25,6 @@ body {
     width: auto;
     flex: 1 1 0%;
     max-width: 100%;
-  }
-
-  .app-shell-sidebar-spacer {
-    flex-shrink: 0;
   }
 }
 
