@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/app/providers';
 import {
@@ -42,11 +42,11 @@ export function useTenantSettings() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tenantsUnavailable, setTenantsUnavailable] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
+  const hydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   const tenantId = hydrated
     ? getActiveTenantId(profile?.tenant_id) || profile?.tenant_id || FALLBACK_TENANT_ID

@@ -18,7 +18,7 @@ export default function AccessDeniedPage() {
 
         <h1 className="text-4xl font-bold text-white mb-3">Access Denied</h1>
         <p className="text-zinc-400 text-lg mb-8">
-          You don't have the required permissions to access this page.
+          You do not have the required permissions to access this page.
         </p>
 
         <div className="flex flex-col gap-4">
