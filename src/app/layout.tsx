@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import "./globals.css";
-import { Toaster } from "@/components/ui/sonner";
+import { ClientToaster } from "@/components/ui/client-toaster";
 import { AuthProvider } from "./providers";
 import { RuleEngineProvider } from "@/contexts/RuleEngineContext";
 import AppShell from "@/components/layout/AppShell";
@@ -39,11 +39,10 @@ export default function RootLayout({
           </RuleEngineProvider>
         </AuthProvider>
 
-        {/* Global Toaster */}
-        <Toaster 
-          position="top-right" 
-          richColors 
-          closeButton 
+        <ClientToaster
+          position="top-right"
+          richColors
+          closeButton
           theme="light"
         />
       </body>

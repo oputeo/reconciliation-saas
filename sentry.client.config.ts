@@ -7,5 +7,10 @@ Sentry.init({
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,
 
+  ignoreErrors: [
+    'Minified React error #418',
+    'Hydration failed because the server rendered',
+  ],
+
   debug: process.env.NODE_ENV === 'development',
 });
