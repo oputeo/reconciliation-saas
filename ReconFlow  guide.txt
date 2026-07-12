@@ -1,0 +1,240 @@
+Sign in as a user with auditor+ access (e.g. admin@oeosolution.com).
+
+───
+
+1. Configure audit periods
+
+Settings → Reconciliation → Audit periods
+
+┌─────────────────────┬───────┬─────────────────────────────────────────┐
+│ Field               │ Value │ Result                                  │
+├─────────────────────┼───────┼─────────────────────────────────────────┤
+│ Current audit year  │ 2026  │ Reconciliation: 2026-01-01 → 2026-12-31 │
+├─────────────────────┼───────┼─────────────────────────────────────────┤
+│ Back audit lookback │ 10    │ Back audit: 2016-01-01 → 2025-12-31     │
+└─────────────────────┴───────┴─────────────────────────────────────────┘
+
+Save. Confirm the preview matches.
+
+Because test data crosses 2025 and 2026, you’ll run reconciliation twice (step 6).
+
+───
+
+2. Clean slate (Supabase SQL Editor)
+
+Run for tenant 0771c1a1-4ff0-46a1-9f98-c6b30fdff049:
+
+DELETE FROM public.anomalies
+WHERE tenant_id = '0771c1a1-4ff0-46a1-9f98-c6b30fdff049';
+
+DELETE FROM public.master_ledger
+WHERE tenant_id = '0771c1a1-4ff0-46a1-9f98-c6b30fdff049';
+
+DELETE FROM public.uploads
+WHERE tenant_id = '0771c1a1-4ff0-46a1-9f98-c6b30fdff049';
+
+-- Optional — fresh back-audit / recovery runs
+DELETE FROM public.revenue_recovery_audit
+WHERE tenant_id = '0771c1a1-4ff0-46a1-9f98-c6b30fdff049';
+
+DELETE FROM public.back_audit_jobs
+WHERE tenant_id = '0771c1a1-4ff0-46a1-9f98-c6b30fdff049';
+
+DELETE FROM public.reconciliation_runs
+WHERE tenant_id = '0771c1a1-4ff0-46a1-9f98-c6b30fdff049';
+
+───
+
+3. Choose a test path
+
+Path A — Quick smoke (~30 min)
+
+Validates upload + reconcile + one rule before the full bulk load.
+
+Path B — Full rules_v3 (~2–3 hours)
+
+All 40k + 26k rows, all scenarios.
+
+───
+
+4. Upload data
+
+Reconciliation → Operations Platform → Upload report
+
+For every file:
+
+┌─────────────┬────────────────────────────────────┐
+│ Field       │ Value                              │
+├─────────────┼────────────────────────────────────┤
+│ Report type │ Generic CSV                        │
+├─────────────┼────────────────────────────────────┤
+│ Ledger side │ Internal or Settlement (see below) │
+├─────────────┼────────────────────────────────────┤
+│ File        │ chunk from upload_ready            │
+└─────────────┴────────────────────────────────────┘
+
+Path A (smoke)
+
+1. upload_ready\rules_test_pack\rule_match_amount_reference_sample.csv → Internal
+2. Same file again (or settlement counterpart if the pack has pairs) → check sample; for smoke, upload internal first, then run reconcile on a small subset
+
+Actually for smoke the README says isolated packs are 80 rows each — often self-contained. Simplest smoke:
+
+1. Upload rule_match_amount_reference_sample.csv as Internal
+2. Upload matching settlement sample if exists — check if rules_test_pack files are internal-only. Looking at manifest - they're per-rule samples. User typically uploads internal side samples.
+
+For a minimal smoke:
+• rule_match_amount_reference_sample.csv → Internal
+• Run reconciliation
+
+For fuller smoke without 17 files:
+• chunks_bulk\MASTER_upload_bulk_chunk_01_of_10.csv → Internal (4,000 rows)
+• chunks_settlement\MASTER_upload_settlement_chunk_01_of_07.csv → Settlement
+
+Path B (full)
+
+Order matters:
+
+1. Internal (10 files) — C:\ReconFlow-TestData\upload_ready\chunks_bulk\
+   MASTER_upload_bulk_chunk_01_of_10.csv … 10_of_10.csv
+   • Type: Generic CSV · Side: Internal
+
+2. Settlement (7 files) — C:\ReconFlow-TestData\upload_ready\chunks_settlement\
+   MASTER_upload_settlement_chunk_01_of_07.csv … 07_of_07.csv
+   • Type: Generic CSV · Side: Settlement
+
+After each upload, expect a success toast with row count. Refresh Master Ledger tab — total should approach ~66,100.
+
+───
+
+5. Confirm ledger load
+
+Reconciliation → Master Ledger
+
+┌───────────────┬────────────────────────────────────────────┐
+│ Check         │ Expected                                   │
+├───────────────┼────────────────────────────────────────────┤
+│ Total records │ ~66,100 (full path) or thousands (partial) │
+├───────────────┼────────────────────────────────────────────┤
+│ Sources       │ mix of bulk_upload, bank_settlement, etc.  │
+└───────────────┴────────────────────────────────────────────┘
+
+SQL sanity check:
+
+SELECT source, COUNT(*)
+FROM master_ledger
+WHERE tenant_id = '0771c1a1-4ff0-46a1-9f98-c6b30fdff049'
+GROUP BY source ORDER BY COUNT(*) DESC;
+
+───
+
+6. Run reconciliation (both years)
+
+Data spans Oct 2025 – Jun 2026. With audit year 2026, the UI button only runs 2026.
+
+6a. Reconcile 2026 (UI)
+
+Operations Platform → Run 2026 Reconciliation
+
+Expect a toast like: matched/processed with a match rate.
+
+6b. Reconcile 2025 (settings toggle)
+
+1. Settings → Reconciliation → set Current audit year to 2025 → Save
+2. Operations Platform → Run 2025 Reconciliation
+3. Set audit year back to 2026 → Save
+
+This covers Oct–Dec 2025 in the pack.
+
+───
+
+7. Run back audit (closed periods)
+
+Revenue Recovery & Back Audit tab
+
+Defaults should show: 2016-01-01 → 2025-12-31
+
+Click Run Back Audit. Expect something like:
+
+• Scanned: tens of thousands (full load)
+• Discrepancies: fee/unmatched/reference flags
+
+Jobs also appear under Back Audit page if you use that route.
+
+───
+
+8. Verify results
+
+SQL — match rates by rule
+
+SELECT matched_rule_code, COUNT(*)
+FROM master_ledger
+WHERE tenant_id = '0771c1a1-4ff0-46a1-9f98-c6b30fdff049'
+  AND status = 'matched'
+GROUP BY matched_rule_code
+ORDER BY COUNT(*) DESC;
+
+Compare loosely to manifest.json → rule_coverage (exact counts won’t match — engine priority means MATCH_AMOUNT_REFERENCE often wins over channel rules).
+
+SQL — anomalies
+
+SELECT type, COUNT(*)
+FROM anomalies
+WHERE tenant_id = '0771c1a1-4ff0-46a1-9f98-c6b30fdff049'
+GROUP BY type ORDER BY COUNT(*) DESC;
+
+SQL — back audit jobs
+
+SELECT id, start_date, end_date, status, transactions_scanned, discrepancies_found
+FROM back_audit_jobs
+WHERE tenant_id = '0771c1a1-4ff0-46a1-9f98-c6b30fdff049'
+ORDER BY created_at DESC LIMIT 5;
+
+Script — isolated rule packs
+
+cd C:\Projects\reconciliation-stable-saas
+node scripts\verify_rules_test_pack.mjs
+
+Some packs may show warnings when MATCH_AMOUNT_REFERENCE takes priority — that’s documented in the manifest.
+
+───
+
+9. UI spot checks
+
+┌────────────────────────┬─────────────────────────────────────────────────────────────────────┐
+│ Page                   │ What to check                                                       │
+├────────────────────────┼─────────────────────────────────────────────────────────────────────┤
+│ Anomalies              │ EXC_* / ADV_* items                                                 │
+├────────────────────────┼─────────────────────────────────────────────────────────────────────┤
+│ Executive Overview     │ Match rate, leakage (clear anomalies if you want a clean dashboard) │
+├────────────────────────┼─────────────────────────────────────────────────────────────────────┤
+│ Product Reconciliation │ Per-product breakdown                                               │
+├────────────────────────┼─────────────────────────────────────────────────────────────────────┤
+│ Settings → Rules       │ 21 rules active                                                     │
+└────────────────────────┴─────────────────────────────────────────────────────────────────────┘
+
+Spike test: filter ledger/anomalies for 2026-05-15 (ADV_ANOMALY_SPIKE in manifest).
+
+───
+
+10. Recommended test sequence (checklist)
+
+[ ] 1. Settings: audit year 2026, lookback 10 — save
+[ ] 2. SQL clean slate
+[ ] 3. Path A smoke OR Path B full upload (internal then settlement)
+[ ] 4. Master Ledger count OK
+[ ] 5. Run 2026 Reconciliation
+[ ] 6. Settings → audit year 2025 → Run 2025 Reconciliation → restore 2026
+[ ] 7. Run Back Audit (2016–2025)
+[ ] 8. SQL rule + anomaly checks
+[ ] 9. verify_rules_test_pack.mjs (optional isolated packs)
+[ ] 10. Executive / Product pages
+
+───
+
+Notes
+
+• Upload 403 — need auditor+ role; refresh and sign in again if needed.
+• Executive leakage after delete — old anomalies rows affect risk until cleaned (step 2).
+• Channel rules (agent/QR/payout) — may lose to MATCH_AMOUNT_REFERENCE in bulk runs; use rules_test_pack samples for isolated proof.
+• Full bulk upload — 17 large files; allow time between chunks; watch for 50MB limit per file (chunks are fine).

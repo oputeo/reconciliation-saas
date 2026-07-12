@@ -1,182 +1,260 @@
-// src/app/iam/page.tsx
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Sidebar from "@/components/layout/Sidebar";
-import { Card } from "@/components/ui/card";
+import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
-} from "@/components/ui/dialog";
-import { Shield, Plus, AlertTriangle } from "lucide-react";
-import { useAuthStore } from "@/store/authStore";
+  Plus, UserPlus, Search, Shield, Clock, CheckCircle, XCircle 
+} from "lucide-react";
+import { toast } from "sonner";
 
-type Role = {
+interface User {
   id: string;
   name: string;
-  description: string;
-  template: string;
-};
+  email: string;
+  role: string;
+  status: "Active" | "Inactive" | "Pending";
+  lastLogin: string;
+  emailConfirmed: boolean;
+}
+
+const iamTabs = [
+  { id: "users", label: "👥 Users" },
+  { id: "roles", label: "🛡️ Roles & Permissions" },
+  { id: "audit", label: "📋 Audit Log" },
+];
 
 export default function IAMPage() {
-  const router = useRouter();
-  const { currentUser } = useAuthStore();
+  const [activeTab, setActiveTab] = useState("users");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState("All");
 
-  const [roles, setRoles] = useState<Role[]>([
-    { id: "admin", name: "System Administrator", description: "Full system access", template: "Full Access" },
-    { id: "finance", name: "Finance Approver", description: "Financial approvals", template: "Finance" },
-    { id: "senior-recon", name: "Senior Reconciliation Officer", description: "Senior reconciliation operations", template: "Reconciliation" },
+  const [users, setUsers] = useState<User[]>([
+    { id: "u1", name: "Eric Opute", email: "eric.opute@moniepoint.com", role: "Admin", status: "Active", lastLogin: "2 hours ago", emailConfirmed: true },
+    { id: "u2", name: "Aisha Bello", email: "aisha.bello@moniepoint.com", role: "Auditor", status: "Active", lastLogin: "Yesterday", emailConfirmed: true },
+    { id: "u3", name: "Tunde Adeyemi", email: "tunde.adeyemi@moniepoint.com", role: "Finance Lead", status: "Pending", lastLogin: "Never", emailConfirmed: false },
   ]);
 
-  const [showCreateRole, setShowCreateRole] = useState(false);
-  const [newRole, setNewRole] = useState({ 
-    name: "", 
-    description: "", 
-    template: "Reconciliation" 
-  });
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("Auditor");
 
-  // Role Protection
-  const allowedRoles = ["System Administrator", "Senior Reconciliation Officer"];
+  // Filtered Users
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           user.email.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRole = roleFilter === "All" || user.role === roleFilter;
+      return matchesSearch && matchesRole;
+    });
+  }, [users, searchTerm, roleFilter]);
 
-  useEffect(() => {
-    if (!allowedRoles.includes(currentUser.role)) {
-      alert("⛔ Access Denied: You don't have permission to access IAM & Access Control.");
-      router.push("/");
-    }
-  }, [currentUser.role, router]);
+  const inviteUser = () => {
+    if (!inviteEmail) return toast.error("Please enter email");
 
-  // Only render if authorized
-  if (!allowedRoles.includes(currentUser.role)) {
-    return (
-      <div className="flex min-h-screen bg-slate-50 items-center justify-center">
-        <div className="text-center">
-          <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold">Access Denied</h2>
-          <p className="text-slate-600 mt-2">Only System Administrators and Senior Reconciliation Officers can access this page.</p>
-          <Button className="mt-6" onClick={() => router.push("/")}>
-            Return to Dashboard
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  const createRole = () => {
-    if (!newRole.name.trim()) return;
-
-    const role: Role = {
-      id: `role-${Date.now()}`,
-      name: newRole.name,
-      description: newRole.description || "Custom role",
-      template: newRole.template,
+    const newUser: User = {
+      id: "u" + Date.now(),
+      name: inviteEmail.split("@")[0],
+      email: inviteEmail,
+      role: inviteRole,
+      status: "Pending",
+      lastLogin: "Never",
+      emailConfirmed: false
     };
 
-    setRoles([...roles, role]);
-    setNewRole({ name: "", description: "", template: "Reconciliation" });
-    setShowCreateRole(false);
+    setUsers([newUser, ...users]);
+    setShowInviteModal(false);
+    setInviteEmail("");
+    toast.success(`Invitation sent to ${inviteEmail}`);
+  };
 
-    alert(`✅ Role "${newRole.name}" created successfully with ${newRole.template} template!`);
+  const resendConfirmation = (email: string) => {
+    toast.success(`Confirmation email resent to ${email}`);
+  };
+
+  const activateUser = (id: string) => {
+    setUsers(users.map(user => 
+      user.id === id ? { ...user, status: "Active", emailConfirmed: true } : user
+    ));
+    toast.success("User activated successfully");
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
-      <Sidebar />
-
-      <main className="flex-1 p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-3xl font-bold">IAM & Access Control</h1>
-              <p className="text-slate-600">Role Management with Smart Templates</p>
-            </div>
-
-            <Dialog open={showCreateRole} onOpenChange={setShowCreateRole}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create New Role
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Role</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <Input
-                    placeholder="Role Name (e.g. Compliance Manager)"
-                    value={newRole.name}
-                    onChange={(e) => setNewRole({ ...newRole, name: e.target.value })}
-                  />
-                  <Input
-                    placeholder="Description"
-                    value={newRole.description}
-                    onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
-                  />
-
-                  <div>
-                    <label className="text-sm font-medium block mb-2">Permission Template</label>
-                    <Select 
-                      value={newRole.template} 
-                      onValueChange={(val) => setNewRole({ ...newRole, template: val })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Reconciliation">Reconciliation Focused</SelectItem>
-                        <SelectItem value="Finance">Finance Focused</SelectItem>
-                        <SelectItem value="Full Access">Full Access (Admin-like)</SelectItem>
-                        <SelectItem value="Read Only">Read-Only Viewer</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <Button onClick={createRole} className="w-full">
-                    Create Role
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+    <div className="min-h-screen bg-gray-50 p-6 md:p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+          <div>
+            <h1 className="text-4xl font-bold">IAM & Role Management</h1>
+            <p className="text-muted-foreground">User Access Control • Permissions • Compliance</p>
           </div>
-
-          {/* Roles List */}
-          <Card className="fin-card">
-            <div className="p-6 border-b">
-              <h2 className="text-xl font-semibold">Available Roles ({roles.length})</h2>
-            </div>
-            <div className="divide-y">
-              {roles.map(role => (
-                <div key={role.id} className="p-6 flex justify-between items-center hover:bg-slate-50">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center">
-                      <Shield className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="font-semibold">{role.name}</p>
-                      <p className="text-sm text-slate-500">{role.description}</p>
-                    </div>
-                  </div>
-                  <Badge variant="outline">{role.template}</Badge>
-                </div>
-              ))}
-            </div>
-          </Card>
         </div>
-      </main>
+
+        {/* Top Clickable Buttons */}
+        <div className="flex flex-wrap gap-3 mb-10 justify-center">
+          {iamTabs.map((tab) => (
+            <Button
+              key={tab.id}
+              variant={activeTab === tab.id ? "default" : "outline"}
+              onClick={() => setActiveTab(tab.id)}
+              className="px-8 py-6 text-lg font-medium min-w-[200px]"
+            >
+              {tab.label}
+            </Button>
+          ))}
+        </div>
+
+        {/* ==================== USERS SECTION ==================== */}
+        {activeTab === "users" && (
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <CardTitle>Team Members ({filteredUsers.length})</CardTitle>
+                
+                <div className="flex gap-3">
+                  <div className="relative w-80">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name or email..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Select value={roleFilter} onValueChange={setRoleFilter}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Filter Role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Roles</SelectItem>
+                      <SelectItem value="Admin">Admin</SelectItem>
+                      <SelectItem value="Auditor">Auditor</SelectItem>
+                      <SelectItem value="Finance Lead">Finance Lead</SelectItem>
+                      <SelectItem value="Viewer">Viewer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button onClick={() => setShowInviteModal(true)} className="gap-2">
+                  <UserPlus size={18} /> Invite New User
+                </Button>
+              </div>
+            </CardHeader>
+
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left py-4 px-6">Name</th>
+                      <th className="text-left py-4 px-6">Email</th>
+                      <th className="text-left py-4 px-6">Role</th>
+                      <th className="text-left py-4 px-6">Status</th>
+                      <th className="text-left py-4 px-6">Email Confirmation</th>
+                      <th className="text-left py-4 px-6">Last Login</th>
+                      <th className="text-right py-4 px-6">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.map(user => (
+                      <tr key={user.id} className="border-b hover:bg-muted/50">
+                        <td className="py-4 px-6 font-medium">{user.name}</td>
+                        <td className="py-4 px-6">{user.email}</td>
+                        <td className="py-4 px-6"><Badge variant="outline">{user.role}</Badge></td>
+                        <td className="py-4 px-6">
+                          <Badge variant={user.status === "Active" ? "default" : "secondary"}>{user.status}</Badge>
+                        </td>
+                        <td className="py-4 px-6">
+                          {user.emailConfirmed ? (
+                            <Badge variant="default" className="gap-1"><CheckCircle size={14} /> Confirmed</Badge>
+                          ) : (
+                            <Badge variant="destructive" className="gap-1"><XCircle size={14} /> Pending</Badge>
+                          )}
+                        </td>
+                        <td className="py-4 px-6 text-sm text-muted-foreground">{user.lastLogin}</td>
+                        <td className="py-4 px-6 text-right space-x-2">
+                          {!user.emailConfirmed && (
+                            <Button variant="outline" size="sm" onClick={() => resendConfirmation(user.email)}>
+                              Resend
+                            </Button>
+                          )}
+                          {user.status === "Pending" && (
+                            <Button size="sm" onClick={() => activateUser(user.id)}>
+                              Activate
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ROLES & PERMISSIONS */}
+        {activeTab === "roles" && (
+          <Card>
+            <CardContent className="p-20 text-center">
+              <Shield className="mx-auto h-20 w-20 text-muted-foreground mb-6" />
+              <h2 className="text-4xl font-bold mb-4">Roles & Permissions</h2>
+              <p className="text-xl text-muted-foreground">Advanced Role-Based Access Control (RBAC) coming soon</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* AUDIT LOG */}
+        {activeTab === "audit" && (
+          <Card>
+            <CardContent className="p-20 text-center">
+              <Clock className="mx-auto h-20 w-20 text-muted-foreground mb-6" />
+              <h2 className="text-4xl font-bold mb-4">Audit Log</h2>
+              <p className="text-xl text-muted-foreground">Complete activity & compliance audit trail coming soon</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Invite Modal */}
+      <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Invite New Team Member</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-6">
+            <div>
+              <Label>Email Address</Label>
+              <Input
+                type="email"
+                placeholder="new.user@moniepoint.com"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Initial Role</Label>
+              <Select value={inviteRole} onValueChange={setInviteRole}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Auditor">Auditor</SelectItem>
+                  <SelectItem value="Finance Lead">Finance Lead</SelectItem>
+                  <SelectItem value="Viewer">Viewer</SelectItem>
+                  <SelectItem value="Admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={inviteUser} className="w-full">Send Invitation</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

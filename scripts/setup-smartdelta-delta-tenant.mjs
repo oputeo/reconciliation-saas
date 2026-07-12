@@ -57,7 +57,7 @@ async function main() {
 
   const { error: keyErr } = await supabase.from('tenant_ingest_keys').insert({
     tenant_id: TENANT_ID,
-    name: 'SmartDelta API Push',
+    label: 'SmartDelta API Push',
     key_prefix: prefix,
     key_hash: keyHash,
     active: true,

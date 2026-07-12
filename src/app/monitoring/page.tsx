@@ -2,237 +2,214 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Sidebar from "@/components/layout/Sidebar";
-import { useUIStore } from "@/store/uiStore";
-import { useAuthStore } from "@/store/authStore";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, TrendingUp, AlertTriangle, Zap } from "lucide-react";
 import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell 
+  Activity, AlertTriangle, ChevronDown, ChevronUp 
+} from "lucide-react";
+import { useAuth } from "@/app/providers";
+import { toast } from "sonner";
+
+// Recharts
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts";
 
-type LiveTransaction = {
-  id: string;
-  time: string;
-  amount: number;
-  source: string;
-  destination: string;
-  status: "Success" | "Failed" | "Pending";
-  matchRate: number;
-};
-
-const statusColors = {
-  Success: "#10b981",
-  Failed: "#ef4444",
-  Pending: "#f59e0b",
-};
-
 export default function MonitoringPage() {
-  const { sidebarCollapsed } = useUIStore();
-  const { currentUser } = useAuthStore();
-  const router = useRouter();
+  const { profile } = useAuth();
+  const currentTenant = profile?.tenant_name ?? 'Workspace';
+  const [isLive, setIsLive] = useState(true);
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
-  // Role Protection: Only these roles can access Live Monitoring
-  const allowedRoles = ["System Administrator", "Senior Reconciliation Officer", "Reconciliation Officer"];
-
-  useEffect(() => {
-    if (!allowedRoles.includes(currentUser.role)) {
-      alert("⛔ Access Denied: Only Reconciliation and Administrative roles can access Live Monitoring.");
-      router.push("/");
-    }
-  }, [currentUser.role, router]);
-
-  // If not authorized, don't render the page
-  if (!allowedRoles.includes(currentUser.role)) {
-    return null;
-  }
-
-  const [transactions, setTransactions] = useState<LiveTransaction[]>([
-    { id: "TXN-7849201", time: "Just now", amount: 2450000, source: "NIBSS", destination: "Wallet", status: "Success", matchRate: 100 },
-    { id: "TXN-7849200", time: "1 min ago", amount: 875500, source: "Paystack", destination: "Core Banking", status: "Success", matchRate: 98 },
+  // Live Transaction Flow Data
+  const [liveData, setLiveData] = useState([
+    { time: "09:00", tx: 89, matched: 87 },
+    { time: "09:05", tx: 124, matched: 119 },
+    { time: "09:10", tx: 98, matched: 96 },
+    { time: "09:15", tx: 156, matched: 152 },
+    { time: "09:20", tx: 142, matched: 138 },
   ]);
 
-  const [volume, setVolume] = useState(2840000);
-  const [matchRate, setMatchRate] = useState(98.7);
-  const [alerts, setAlerts] = useState([
-    { id: 1, message: "High value spike detected (₦45M from new merchant)", severity: "High", time: "2 min ago" },
-    { id: 2, message: "Unusual retry pattern on account ****7890", severity: "Medium", time: "17 min ago" },
-  ]);
-
-  const [volumeData, setVolumeData] = useState([
-    { time: "10:00", volume: 420000 }, { time: "10:05", volume: 680000 },
-    { time: "10:10", volume: 950000 }, { time: "10:15", volume: 1240000 },
+  // Duplicate Transaction Monitoring
+  const [duplicateTransactions] = useState([
+    {
+      id: "DUP-001",
+      transaction_id: "TXN-987654321",
+      bank: "GTBank",
+      amount: "₦2,450,000",
+      timestamp: "2 min ago",
+      count: 2,
+      description: "Same transaction ID posted twice in different batches",
+      status: "Open"
+    },
+    {
+      id: "DUP-002",
+      transaction_id: "TXN-456789123",
+      bank: "Access Bank",
+      amount: "₦1,875,000",
+      timestamp: "17 min ago",
+      count: 3,
+      description: "Multiple credits with identical reference",
+      status: "Investigating"
+    },
   ]);
 
   // Simulate live updates
   useEffect(() => {
+    if (!isLive) return;
     const interval = setInterval(() => {
-      const newTxn: LiveTransaction = {
-        id: `TXN-${Math.floor(Math.random() * 9000000) + 1000000}`,
-        time: "Just now",
-        amount: Math.floor(Math.random() * 3500000) + 300000,
-        source: ["NIBSS", "Paystack", "Flutterwave", "Interswitch"][Math.floor(Math.random() * 4)],
-        destination: ["Wallet", "Core Banking", "Settlement"][Math.floor(Math.random() * 3)],
-        status: Math.random() > 0.15 ? "Success" : "Failed",
-        matchRate: Math.floor(Math.random() * 6) + 94,
-      };
-
-      setTransactions(prev => [newTxn, ...prev.slice(0, 8)]);
-      setVolume(prev => prev + Math.floor(Math.random() * 65000) + 12000);
-      setMatchRate(prev => Math.max(96, Math.min(99.8, prev + (Math.random() - 0.5) * 0.4)));
-
-      setVolumeData(prev => [...prev.slice(1), { 
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 
-        volume: volume + Math.floor(Math.random() * 250000) 
-      }]);
-    }, 2200);
-
+      setLiveData(prev => {
+        const last = prev[prev.length - 1];
+        const newTx = Math.floor(last.tx * (0.9 + Math.random() * 0.45));
+        return [...prev.slice(1), {
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          tx: newTx,
+          matched: Math.floor(newTx * 0.97)
+        }];
+      });
+    }, 2500);
     return () => clearInterval(interval);
-  }, [volume]);
+  }, [isLive]);
 
-  const statusCount = {
-    Success: transactions.filter(t => t.status === "Success").length,
-    Failed: transactions.filter(t => t.status === "Failed").length,
-    Pending: transactions.filter(t => t.status === "Pending").length,
+  const toggleRow = (id: string) => {
+    setExpandedRow(expandedRow === id ? null : id);
   };
 
-  const pieData = [
-    { name: "Success", value: statusCount.Success, color: "#10b981" },
-    { name: "Failed", value: statusCount.Failed, color: "#ef4444" },
-    { name: "Pending", value: statusCount.Pending, color: "#f59e0b" },
-  ];
+  const acknowledgeDuplicate = (id: string) => {
+    toast.success(`Duplicate transaction ${id} acknowledged and logged`);
+    setExpandedRow(null);
+  };
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
-      <Sidebar />
-
-      <main className={`flex-1 transition-all duration-300 p-8 ${sidebarCollapsed ? "ml-0" : "ml-72"}`}>
-        <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-3xl font-bold">Real-Time Transaction Monitoring</h1>
-              <p className="text-slate-600">Live • Intelligent • Actionable</p>
-            </div>
-            <Button variant="outline">
-              <RefreshCw className="mr-2 h-4 w-4" /> Pause Feed
-            </Button>
-          </div>
-
-          {/* Key Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-            <Card className="fin-card p-6 col-span-2">
-              <p className="text-sm text-slate-600">Live Volume (Today)</p>
-              <p className="text-5xl font-bold text-emerald-600 mt-3">₦{(volume/1000000).toFixed(1)}M</p>
-            </Card>
-            <Card className="fin-card p-6">
-              <p className="text-sm text-slate-600">Match Rate</p>
-              <p className="text-5xl font-bold text-emerald-600 mt-3">{matchRate.toFixed(1)}%</p>
-            </Card>
-            <Card className="fin-card p-6">
-              <p className="text-sm text-slate-600">Txns / min</p>
-              <p className="text-5xl font-bold mt-3">184</p>
-            </Card>
-            <Card className="fin-card p-6 border-red-200">
-              <p className="text-sm text-red-600">Active Alerts</p>
-              <p className="text-5xl font-bold text-red-600 mt-3">{alerts.length}</p>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Live Volume Chart */}
-            <Card className="fin-card p-6 lg:col-span-2">
-              <h3 className="font-semibold mb-4">Transaction Volume Trend (Last 30 mins)</h3>
-              <ResponsiveContainer width="100%" height={320}>
-                <LineChart data={volumeData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="time" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="natural" dataKey="volume" stroke="#10b981" strokeWidth={4} dot={{ r: 5 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </Card>
-
-            {/* Status Distribution */}
-            <Card className="fin-card p-6">
-              <h3 className="font-semibold mb-4">Transaction Status</h3>
-              <ResponsiveContainer width="100%" height={320}>
-                <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={70} outerRadius={110} dataKey="value">
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex justify-center gap-6 mt-4">
-                {pieData.map((entry, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
-                    <span className="text-sm">{entry.name} ({entry.value})</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </div>
-
-          {/* Live Alerts */}
-          <Card className="fin-card mt-8">
-            <div className="p-6 border-b flex justify-between">
-              <h2 className="text-xl font-semibold flex items-center gap-2">
-                <AlertTriangle className="text-red-500" /> Active Alerts & Anomalies
-              </h2>
-              <Badge variant="destructive">{alerts.length} Active</Badge>
-            </div>
-            <div className="divide-y">
-              {alerts.map(alert => (
-                <div key={alert.id} className="p-6 flex justify-between items-start">
-                  <div className="flex gap-4">
-                    <AlertTriangle className="w-6 h-6 text-red-500 mt-1" />
-                    <div>
-                      <p className="font-medium">{alert.message}</p>
-                      <p className="text-sm text-slate-500 mt-1">{alert.time}</p>
-                    </div>
-                  </div>
-                  <Button size="sm" variant="outline">Investigate</Button>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Live Feed */}
-          <Card className="fin-card mt-8">
-            <div className="p-6 border-b bg-slate-50">
-              <h2 className="text-xl font-semibold flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                Live Transaction Feed
-              </h2>
-            </div>
-            <div className="divide-y max-h-[500px] overflow-y-auto">
-              {transactions.map((tx) => (
-                <div key={tx.id} className="p-6 flex justify-between items-center hover:bg-slate-50">
-                  <div className="flex items-center gap-4">
-                    <div className="font-mono text-sm">{tx.id}</div>
-                    <div>
-                      <p className="font-medium">{tx.source} → {tx.destination}</p>
-                      <p className="text-sm text-slate-500">₦{tx.amount.toLocaleString()}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <Badge variant={tx.status === "Success" ? "default" : "destructive"}>{tx.status}</Badge>
-                    <p className="text-xs text-slate-500 mt-2">{tx.time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
+    <div className="space-y-8">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-4xl font-bold text-slate-900">Live Monitoring</h1>
+          <p className="text-slate-600">Real-time Transaction & Duplicate Detection • {currentTenant?.name}</p>
         </div>
-      </main>
+        <Button 
+          variant={isLive ? "destructive" : "default"} 
+          onClick={() => setIsLive(!isLive)}
+        >
+          {isLive ? "Pause Live Feed" : "Resume Live Feed"}
+        </Button>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="fin-card p-6">
+          <p className="text-sm text-slate-600">Transactions/sec</p>
+          <p className="text-4xl font-semibold mt-2">142</p>
+        </Card>
+        <Card className="fin-card p-6">
+          <p className="text-sm text-slate-600">Match Rate</p>
+          <p className="text-4xl font-semibold mt-2 text-emerald-600">98.7%</p>
+        </Card>
+        <Card className="fin-card p-6">
+          <p className="text-sm text-slate-600">Active Duplicates</p>
+          <p className="text-4xl font-semibold mt-2 text-amber-600">7</p>
+        </Card>
+        <Card className="fin-card p-6">
+          <p className="text-sm text-slate-600">System Status</p>
+          <p className="text-4xl font-semibold mt-2 text-emerald-600">Healthy</p>
+        </Card>
+      </div>
+
+      {/* Live Transaction Chart */}
+      <Card className="fin-card p-8">
+        <div className="flex justify-between mb-6">
+          <h2 className="text-xl font-semibold">Live Transaction Flow</h2>
+          <Badge variant="outline">Real-time</Badge>
+        </div>
+        <ResponsiveContainer width="100%" height={380}>
+          <AreaChart data={liveData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="time" />
+            <YAxis />
+            <Tooltip />
+            <Area type="natural" dataKey="tx" stroke="#2563eb" fill="#dbeafe" strokeWidth={3} />
+            <Area type="natural" dataKey="matched" stroke="#10b981" fill="#d1fae5" strokeWidth={3} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </Card>
+
+      {/* Duplicate Transaction Monitoring */}
+      <Card className="fin-card overflow-hidden">
+        <div className="p-6 border-b bg-slate-50 flex justify-between items-center">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <AlertTriangle className="text-red-600" /> Duplicate Transaction ID Monitoring
+          </h2>
+          <Badge variant="outline">Live Detection</Badge>
+        </div>
+
+        <table className="w-full">
+          <thead>
+            <tr className="bg-slate-50 border-b">
+              <th className="text-left py-5 px-6">Transaction ID</th>
+              <th className="text-left py-5 px-6">Bank</th>
+              <th className="text-right py-5 px-6">Amount</th>
+              <th className="text-center py-5 px-6">Occurrences</th>
+              <th className="text-center py-5 px-6">Detected</th>
+              <th className="w-40"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {duplicateTransactions.map((dup) => (
+              <React.Fragment key={dup.id}>
+                <tr className="border-b hover:bg-slate-50">
+                  <td className="py-5 px-6 font-mono">{dup.transaction_id}</td>
+                  <td className="py-5 px-6 font-medium">{dup.bank}</td>
+                  <td className="py-5 px-6 text-right font-medium text-amber-600">{dup.amount}</td>
+                  <td className="py-5 px-6 text-center">
+                    <Badge className="bg-red-100 text-red-700">{dup.count} times</Badge>
+                  </td>
+                  <td className="py-5 px-6 text-center text-sm text-slate-500">{dup.timestamp}</td>
+                  <td className="py-5 px-6">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => toggleRow(dup.id)}
+                    >
+                      {expandedRow === dup.id ? "Hide" : "Investigate"}
+                      {expandedRow === dup.id ? <ChevronUp size={16} className="ml-1" /> : <ChevronDown size={16} className="ml-1" />}
+                    </Button>
+                  </td>
+                </tr>
+
+                {/* Expandable Details */}
+                {expandedRow === dup.id && (
+                  <tr className="bg-slate-50">
+                    <td colSpan={6} className="p-8">
+                      <div className="bg-white border rounded-2xl p-8">
+                        <h3 className="font-semibold text-lg mb-6">Duplicate Transaction Analysis</h3>
+                        
+                        <div className="grid md:grid-cols-2 gap-8 mb-8">
+                          <div>
+                            <p className="text-sm text-slate-500 mb-1">DESCRIPTION</p>
+                            <p className="text-slate-700">{dup.description}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-slate-500 mb-1">RECOMMENDED ACTION</p>
+                            <p className="text-slate-700">Reverse duplicate instance and flag for manual review.</p>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-4">
+                          <Button variant="outline" onClick={() => setExpandedRow(null)}>Cancel</Button>
+                          <Button onClick={() => acknowledgeDuplicate(dup.id)} className="accent-btn">
+                            Acknowledge & Resolve
+                          </Button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      </Card>
     </div>
   );
 }

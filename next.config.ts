@@ -1,7 +1,36 @@
-import type { NextConfig } from "next";
+// next.config.ts
+import type { NextConfig } from 'next';
+import { withSentryConfig } from '@sentry/nextjs';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Allow LAN IP access during live demos (fixes HMR WebSocket over 10.x.x.x)
+  allowedDevOrigins: ['10.199.220.251', 'localhost', '127.0.0.1'],
+  reactStrictMode: true,
+
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: '**' },
+    ],
+  },
+
+  poweredByHeader: false,
+  compress: true,
+
+  typescript: {
+    ignoreBuildErrors: false,
+  },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  silent: true,
+  org: process.env.SENTRY_ORG ?? 'oeosolution',
+  project: process.env.SENTRY_PROJECT ?? 'reconflow',
+  widenClientFileUpload: true,
+  sourcemaps: {
+    disable: true,
+  },
+});

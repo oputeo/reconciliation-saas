@@ -1,0 +1,1 @@
+Fastest path: Desktop PowerShell → cd C:\Windows\system32 → grok --resume 019eb5fd-ccbb-7981-be9f-d77f3a81c72f

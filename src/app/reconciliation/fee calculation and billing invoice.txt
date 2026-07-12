@@ -1,0 +1,37 @@
+Let me give you a clear, professional explanation of the fee structure I implemented:Fee Breakdown ExplanationFee Type
+How it's Calculated
+Realistic Purpose
+Deducted From?
+Platform Fee
+Tiered based on Variance Amount
+Base operational cost + higher for complex cases
+Service Fee (separate)
+AI Processing Fee
+₦8.75 per transaction
+Cost of running AI matching engine
+Service Fee (separate)
+Commission
+0.8% of Variance Amount
+Success-based fee for recovered funds
+Usually from recovered amount
+VAT
+7.5% on (Platform + AI + Commission)
+Government tax
+Added to total invoice
+
+Detailed Explanation:Platform Fee (Tiered)Small variance (< ₦5M) → ₦150,000
+Medium (₦5M - ₦20M) → ₦245,000 - ₦320,000
+High (> ₦50M) → ₦450,000
+Purpose: Covers system usage, storage, and basic reconciliation infrastructure.
+
+AI Processing Fee (Volume-based)₦8.75 × Total Transactions
+Purpose: Pays for the actual AI computation (matching, anomaly detection, root cause analysis).
+
+Commission (0.8%)You already know this — it's performance-based on the variance recovered.
+
+VAT (7.5%)Standard Nigerian VAT on the total service fee.
+
+Important Clarification:These fees are NOT directly deducted from the customer's transactions.Instead:They are service fees charged to the organization (Moniepoint) or the department using ReconFlow.
+They appear as a separate invoice or deduction from the recoverable amount before it is credited back.
+In real fintech reconciliation platforms, these are usually billed monthly or per reconciliation run.
+

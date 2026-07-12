@@ -1,9 +1,9 @@
-// src/components/ProtectedRoute.tsx
 "use client";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/store/authStore";
+import { useAuth } from "@/app/providers";
+import { hasMinRole, type AppRole } from "@/lib/settings/permissions";
 
 type Props = {
   children: React.ReactNode;
@@ -12,17 +12,20 @@ type Props = {
 };
 
 export default function ProtectedRoute({ children, allowedRoles, fallbackPath = "/" }: Props) {
-  const { currentUser } = useAuthStore();
+  const { profile, loading } = useAuth();
   const router = useRouter();
 
+  const isAllowed =
+    allowedRoles.includes("all") ||
+    allowedRoles.some((role) => hasMinRole(profile?.role, role as AppRole));
+
   useEffect(() => {
-    if (!allowedRoles.includes(currentUser.role) && !allowedRoles.includes("all")) {
-      alert("⛔ Access Denied: Insufficient permissions for this page.");
+    if (!loading && !isAllowed) {
       router.push(fallbackPath);
     }
-  }, [currentUser.role, router, allowedRoles, fallbackPath]);
+  }, [loading, isAllowed, router, fallbackPath]);
 
-  if (!allowedRoles.includes(currentUser.role) && !allowedRoles.includes("all")) {
+  if (loading || !isAllowed) {
     return null;
   }
 

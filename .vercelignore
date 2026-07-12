@@ -1,0 +1,59 @@
+# Never upload to Vercel (CLI deploys). Complements .gitignore.
+
+# Marketing / client deliverables (large docs, PDFs, images)
+deliverables/
+
+# Secrets and local env
+.env
+.env.*
+!.env.example
+*keys.txt
+*key*.txt
+supabase keys.txt
+api groq key.txt
+
+# Local / IDE junk
+.DS_Store
+*.pem
+*.tsbuildinfo
+~$*
+setCollapsed(!collapsed)}
+signOut()}
+{
+
+# Dev / ops scripts (not needed for Next.js build)
+scripts/
+*.ps1
+*.bat
+analyze-project.bat
+backup.bat
+backup-stable.bat
+
+# Docs and internal notes (not needed at runtime)
+deliverables/
+ARCHITECTURE.md
+AGENTS.md
+CLAUDE.md
+ReconFlow  guide.txt
+ReconFlow TERMINAL PATH.txt
+exclude.txt
+
+# Supabase backend is deployed separately (Edge Functions live on Supabase, not Vercel)
+supabase/
+
+# Tests and tooling
+coverage/
+vitest.config.ts
+vitest.setup.ts
+**/*.test.ts
+**/*.test.tsx
+
+# Git / CI metadata (optional on CLI upload)
+.github/
+.git/
+
+# Dependencies and build artifacts (Vercel installs/builds these itself)
+node_modules/
+.next/
+out/
+build/
