@@ -157,12 +157,15 @@ function SidebarNavContent() {
         >
           <Avatar className="h-10 w-10 border border-slate-200 shrink-0">
             <AvatarImage src={currentUser.avatar} />
-            <AvatarFallback className="bg-emerald-100 text-emerald-700 font-medium">
+            <AvatarFallback
+              className="bg-emerald-100 text-emerald-700 font-medium"
+              suppressHydrationWarning
+            >
               {currentUser.name.substring(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
           {!collapsed && (
-            <div className="text-left truncate min-w-0">
+            <div className="text-left truncate min-w-0" suppressHydrationWarning>
               <p className="font-medium truncate">{currentUser.name}</p>
               <p className="text-xs text-emerald-600 capitalize truncate">
                 {currentUser.role} · {currentUser.tenant}

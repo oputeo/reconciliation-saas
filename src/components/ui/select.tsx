@@ -104,16 +104,19 @@ function Select({
     if (type === SelectContent || type.displayName === 'SelectContent') content = child;
   });
 
+  const contextValue = React.useMemo(
+    () => ({
+      value,
+      setValue,
+      open,
+      setOpen,
+      itemLabels,
+    }),
+    [value, setValue, open, setOpen, itemLabels],
+  );
+
   return (
-    <SelectContext.Provider
-      value={{
-        value,
-        setValue,
-        open,
-        setOpen,
-        itemLabels,
-      }}
-    >
+    <SelectContext.Provider value={contextValue}>
       <div
         data-slot="select"
         data-disabled={disabled ? '' : undefined}

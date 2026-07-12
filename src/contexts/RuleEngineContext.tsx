@@ -83,7 +83,7 @@ export function RuleEngineProvider({ children }: { children: ReactNode }) {
     if (isReady && tenantId) refreshRules();
   }, [isReady, tenantId, refreshRules]);
 
-  const saveRuleChange = async (
+  const saveRuleChange = useCallback(async (
     id: string,
     patch: RuleChangePatch,
     options?: { direct?: boolean },
@@ -102,48 +102,66 @@ export function RuleEngineProvider({ children }: { children: ReactNode }) {
     const change = await proposeRuleChange(tenantId, current, patch);
     setPendingByRuleId((prev) => ({ ...prev, [id]: change }));
     return 'proposed';
-  };
+  }, [rules, tenantId, canDirectPublish, canPropose]);
 
-  const toggleRule = async (id: string) => {
+  const toggleRule = useCallback(async (id: string) => {
     const current = rules.find((r) => r.id === id);
     if (!current) throw new Error('Rule not found');
     return saveRuleChange(id, { active: !current.active });
-  };
+  }, [rules, saveRuleChange]);
 
-  const resetToDefaults = async () => {
+  const resetToDefaults = useCallback(async () => {
     if (!tenantId) return;
     const data = await resetReconciliationRules(tenantId);
     setRules(data);
     setPendingByRuleId({});
-  };
+  }, [tenantId]);
 
   const activeRules = useMemo(() => rules.filter((r) => r.active), [rules]);
 
-  const getRulesForChannel = (channel: string) =>
+  const getRulesForChannel = useCallback((channel: string) =>
     activeRules.filter(
       (r) =>
         r.category === 'channel' &&
         JSON.stringify(r.config).toLowerCase().includes(channel.toLowerCase()),
-    );
+    ),
+  [activeRules]);
+
+  const value = useMemo(
+    () => ({
+      rules,
+      activeRules,
+      pendingByRuleId,
+      loading,
+      canEdit,
+      canPropose,
+      canDirectPublish,
+      canReset,
+      refreshRules,
+      saveRuleChange,
+      toggleRule,
+      resetToDefaults,
+      getRulesForChannel,
+    }),
+    [
+      rules,
+      activeRules,
+      pendingByRuleId,
+      loading,
+      canEdit,
+      canPropose,
+      canDirectPublish,
+      canReset,
+      refreshRules,
+      saveRuleChange,
+      toggleRule,
+      resetToDefaults,
+      getRulesForChannel,
+    ],
+  );
 
   return (
-    <RuleEngineContext.Provider
-      value={{
-        rules,
-        activeRules,
-        pendingByRuleId,
-        loading,
-        canEdit,
-        canPropose,
-        canDirectPublish,
-        canReset,
-        refreshRules,
-        saveRuleChange,
-        toggleRule,
-        resetToDefaults,
-        getRulesForChannel,
-      }}
-    >
+    <RuleEngineContext.Provider value={value}>
       {children}
     </RuleEngineContext.Provider>
   );

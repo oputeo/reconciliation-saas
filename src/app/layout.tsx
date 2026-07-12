@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ClientToaster } from "@/components/ui/client-toaster";
 import { AuthProvider } from "./providers";
-import { RuleEngineProvider } from "@/contexts/RuleEngineContext";
 import AppShell from "@/components/layout/AppShell";
 
 export const dynamic = 'force-dynamic';
@@ -31,9 +30,7 @@ export default function RootLayout({
       <body className="antialiased bg-slate-50 text-slate-900 font-sans" suppressHydrationWarning>
         
         <AuthProvider>
-          <RuleEngineProvider>
-            <AppShell>{children}</AppShell>
-          </RuleEngineProvider>
+          <AppShell>{children}</AppShell>
         </AuthProvider>
 
         <ClientToaster

@@ -1,7 +1,13 @@
-// src/app/providers.tsx
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { supabase } from '@/lib/supabase';
 import { fetchTenantMeta } from '@/lib/settings/tenant';
 import { getActiveTenantId } from '@/lib/settings/adminApi';
@@ -24,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string, authUser?: User | null) => {
+  const fetchProfile = useCallback(async (userId: string, authUser?: User | null) => {
     const activeTenantId = getActiveTenantId();
 
     let roleRow: { role: string; tenant_id: string } | null = null;
@@ -71,11 +77,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         'User',
       email: authUser?.email,
     });
-  };
+  }, []);
 
-  const refreshRole = async () => {
+  const refreshRole = useCallback(async () => {
     if (user) await fetchProfile(user.id, user);
-  };
+  }, [user, fetchProfile]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -91,25 +97,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => listener.subscription.unsubscribe();
-  }, []);
+  }, [fetchProfile]);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('reconflow_active_tenant_id');
     }
     await supabase.auth.signOut();
-  };
+  }, []);
 
-  const hasPermission = (requiredRole: string): boolean => {
+  const hasPermission = useCallback((requiredRole: string): boolean => {
     if (!profile?.role) return false;
     return hasMinRole(profile.role, requiredRole as AppRole);
-  };
+  }, [profile?.role]);
 
-  return (
-    <AuthContext.Provider value={{ user, profile, loading, signOut, hasPermission, refreshRole }}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({
+      user,
+      profile,
+      loading,
+      signOut,
+      hasPermission,
+      refreshRole,
+    }),
+    [user, profile, loading, signOut, hasPermission, refreshRole],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export const useAuth = () => {

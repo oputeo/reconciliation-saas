@@ -35,6 +35,7 @@ export default withSentryConfig(nextConfig, {
   org: process.env.SENTRY_ORG ?? 'oeosolution',
   project: process.env.SENTRY_PROJECT ?? 'reconflow',
   widenClientFileUpload: true,
+  autoInstrumentAppDirectory: false,
   sourcemaps: {
     disable: true,
   },
