@@ -1,190 +1,303 @@
-"use client"
+'use client';
 
-import * as React from "react"
-import { Select as SelectPrimitive } from "radix-ui"
+import * as React from 'react';
+import { Check, ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-import { cn } from "@/lib/utils"
-import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
+type SelectContextValue = {
+  value: string;
+  setValue: (value: string) => void;
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  itemLabels: Map<string, string>;
+};
+
+const SelectContext = React.createContext<SelectContextValue | null>(null);
+
+function useSelectContext() {
+  const ctx = React.useContext(SelectContext);
+  if (!ctx) throw new Error('Select components must be used within <Select>');
+  return ctx;
+}
+
+function itemLabelFromChildren(children: React.ReactNode): string {
+  if (typeof children === 'string' || typeof children === 'number') return String(children);
+  if (Array.isArray(children)) return children.map(itemLabelFromChildren).join('');
+  return '';
+}
+
+function collectItemLabels(node: React.ReactNode, map: Map<string, string>) {
+  React.Children.forEach(node, (child) => {
+    if (!React.isValidElement(child)) return;
+    const type = child.type as { displayName?: string };
+    if (type === SelectItem || type.displayName === 'SelectItem') {
+      const props = child.props as { value: string; children: React.ReactNode };
+      map.set(props.value, itemLabelFromChildren(props.children));
+      return;
+    }
+    if (
+      type === SelectContent ||
+      type === SelectGroup ||
+      type.displayName === 'SelectContent' ||
+      type.displayName === 'SelectGroup'
+    ) {
+      collectItemLabels((child.props as { children: React.ReactNode }).children, map);
+    }
+  });
+}
 
 function Select({
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Root>) {
-  return <SelectPrimitive.Root data-slot="select" {...props} />
-}
-
-function SelectGroup({
+  value: valueProp,
+  defaultValue,
+  onValueChange,
+  open: openProp,
+  onOpenChange,
+  children,
+  disabled,
   className,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Group>) {
-  return (
-    <SelectPrimitive.Group
-      data-slot="select-group"
-      className={cn("p-1", className)}
-      {...props}
-    />
-  )
-}
+}: {
+  value?: string;
+  defaultValue?: string;
+  onValueChange?: (value: string) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  children: React.ReactNode;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
+  const openControlled = openProp !== undefined;
+  const open = openControlled ? openProp : uncontrolledOpen;
+  const setOpen = React.useCallback(
+    (next: boolean) => {
+      if (!openControlled) setUncontrolledOpen(next);
+      onOpenChange?.(next);
+    },
+    [openControlled, onOpenChange],
+  );
+  const [uncontrolled, setUncontrolled] = React.useState(defaultValue ?? '');
+  const isControlled = valueProp !== undefined;
+  const value = isControlled ? valueProp : uncontrolled;
 
-function SelectValue({
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Value>) {
-  return <SelectPrimitive.Value data-slot="select-value" {...props} />
+  const itemLabels = React.useMemo(() => {
+    const map = new Map<string, string>();
+    collectItemLabels(children, map);
+    return map;
+  }, [children]);
+
+  const setValue = React.useCallback(
+    (next: string) => {
+      if (!isControlled) setUncontrolled(next);
+      onValueChange?.(next);
+      setOpen(false);
+    },
+    [isControlled, onValueChange, setOpen],
+  );
+
+  let trigger: React.ReactNode = null;
+  let content: React.ReactNode = null;
+
+  React.Children.forEach(children, (child) => {
+    if (!React.isValidElement(child)) return;
+    const type = child.type as { displayName?: string };
+    if (type === SelectTrigger || type.displayName === 'SelectTrigger') trigger = child;
+    if (type === SelectContent || type.displayName === 'SelectContent') content = child;
+  });
+
+  return (
+    <SelectContext.Provider
+      value={{
+        value,
+        setValue,
+        open,
+        setOpen,
+        itemLabels,
+      }}
+    >
+      <div
+        data-slot="select"
+        data-disabled={disabled ? '' : undefined}
+        className={cn(
+          'w-full rounded-md border border-input bg-background shadow-sm transition-shadow',
+          open && 'ring-2 ring-ring/30',
+          disabled && 'pointer-events-none opacity-50',
+          className,
+        )}
+      >
+        {trigger}
+        {open && content}
+      </div>
+    </SelectContext.Provider>
+  );
 }
 
 function SelectTrigger({
   className,
-  size = "default",
   children,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
-  size?: "sm" | "default"
+  size = 'default',
+  id,
+}: {
+  className?: string;
+  children?: React.ReactNode;
+  size?: 'sm' | 'default';
+  id?: string;
 }) {
+  const { open, setOpen } = useSelectContext();
+
   return (
-    <SelectPrimitive.Trigger
+    <button
+      id={id}
+      type="button"
       data-slot="select-trigger"
       data-size={size}
+      aria-expanded={open}
+      aria-haspopup="listbox"
+      onClick={() => setOpen(!open)}
       className={cn(
-        "flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-sm shadow-sm transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-50 data-placeholder:text-muted-foreground data-[size=sm]:h-8 data-[size=sm]:text-xs *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:text-left dark:bg-input/30",
-        className
+        'flex w-full min-h-10 items-center justify-between gap-2 px-3 py-2.5 text-sm text-left',
+        'hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-inset',
+        size === 'sm' && 'min-h-8 text-xs',
+        className,
       )}
-      {...props}
     >
-      {children}
-      <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
-      </SelectPrimitive.Icon>
-    </SelectPrimitive.Trigger>
-  )
+      <span className="flex-1 min-w-0">{children}</span>
+      <ChevronDown
+        className={cn('size-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')}
+        aria-hidden
+      />
+    </button>
+  );
 }
+SelectTrigger.displayName = 'SelectTrigger';
+
+function SelectValue({ placeholder = 'Select an option' }: { placeholder?: string }) {
+  const ctx = useSelectContext();
+  const label = ctx.itemLabels.get(ctx.value) ?? '';
+
+  return (
+    <span
+      data-slot="select-value"
+      className={cn('block leading-snug line-clamp-2', label ? 'text-foreground' : 'text-muted-foreground')}
+    >
+      {label || placeholder}
+    </span>
+  );
+}
+SelectValue.displayName = 'SelectValue';
 
 function SelectContent({
   className,
   children,
-  position = "popper",
-  align = "start",
-  side = "bottom",
-  sideOffset = 4,
-  collisionPadding = 12,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Content>) {
+}: {
+  className?: string;
+  children?: React.ReactNode;
+}) {
   return (
-    <SelectPrimitive.Portal>
-      <SelectPrimitive.Content
-        data-slot="select-content"
-        side={side}
-        sideOffset={sideOffset}
-        collisionPadding={collisionPadding}
-        className={cn(
-          "relative z-[500] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md",
-          "max-h-[min(20rem,var(--radix-select-content-available-height))]",
-          "min-w-[var(--radix-select-trigger-width)] max-w-[min(24rem,calc(100vw-2rem))]",
-          "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-          "data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2",
-          position === "popper" &&
-            "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
-          className,
-        )}
-        position={position}
-        align={align}
-        {...props}
-      >
-        <SelectScrollUpButton />
-        <SelectPrimitive.Viewport
-          className={cn(
-            "p-1",
-            position === "popper" &&
-              "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1",
-          )}
-        >
-          {children}
-        </SelectPrimitive.Viewport>
-        <SelectScrollDownButton />
-      </SelectPrimitive.Content>
-    </SelectPrimitive.Portal>
-  )
+    <div
+      role="listbox"
+      data-slot="select-content"
+      className={cn(
+        'border-t bg-muted/20 max-h-72 overflow-y-auto',
+        className,
+      )}
+    >
+      <div className="space-y-0.5 p-2">{children}</div>
+    </div>
+  );
 }
+SelectContent.displayName = 'SelectContent';
+
+function SelectGroup({
+  className,
+  children,
+}: {
+  className?: string;
+  children?: React.ReactNode;
+}) {
+  return <div data-slot="select-group" className={cn('space-y-0.5', className)}>{children}</div>;
+}
+SelectGroup.displayName = 'SelectGroup';
 
 function SelectLabel({
   className,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Label>) {
+  children,
+}: {
+  className?: string;
+  children?: React.ReactNode;
+}) {
   return (
-    <SelectPrimitive.Label
+    <p
       data-slot="select-label"
-      className={cn("px-2 py-2 text-xs font-semibold text-muted-foreground", className)}
-      {...props}
-    />
-  )
+      className={cn(
+        'px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground',
+        className,
+      )}
+    >
+      {children}
+    </p>
+  );
 }
+SelectLabel.displayName = 'SelectLabel';
 
 function SelectItem({
   className,
   children,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Item>) {
+  value,
+  disabled,
+  description,
+}: {
+  className?: string;
+  children?: React.ReactNode;
+  value: string;
+  disabled?: boolean;
+  description?: string;
+}) {
+  const ctx = useSelectContext();
+  const selected = ctx.value === value;
+
   return (
-    <SelectPrimitive.Item
+    <button
+      type="button"
+      role="option"
+      aria-selected={selected}
       data-slot="select-item"
+      disabled={disabled}
+      onClick={() => !disabled && ctx.setValue(value)}
       className={cn(
-        "relative flex w-full cursor-default select-none items-start rounded-sm py-2.5 pl-2 pr-8 text-sm outline-none",
-        "focus:bg-accent focus:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
+        'flex w-full items-start gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors',
+        'hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
+        selected && 'bg-accent/80 font-medium',
+        disabled && 'pointer-events-none opacity-50',
         className,
       )}
-      {...props}
     >
-      <span className="absolute right-2 flex size-4 items-center justify-center">
-        <SelectPrimitive.ItemIndicator>
-          <CheckIcon className="size-4" />
-        </SelectPrimitive.ItemIndicator>
+      <span className="flex-1 min-w-0">
+        <span className="block leading-snug whitespace-normal">{children}</span>
+        {description ? (
+          <span className="mt-0.5 block text-xs text-muted-foreground leading-relaxed">
+            {description}
+          </span>
+        ) : null}
       </span>
-      <SelectPrimitive.ItemText className="whitespace-normal leading-snug">
-        {children}
-      </SelectPrimitive.ItemText>
-    </SelectPrimitive.Item>
-  )
+      {selected ? <Check className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden /> : null}
+    </button>
+  );
+}
+SelectItem.displayName = 'SelectItem';
+
+function SelectSeparator({ className }: { className?: string }) {
+  return <div data-slot="select-separator" className={cn('my-2 border-t', className)} />;
+}
+SelectSeparator.displayName = 'SelectSeparator';
+
+/** @deprecated Inline select no longer uses scroll buttons */
+function SelectScrollUpButton() {
+  return null;
 }
 
-function SelectSeparator({
-  className,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Separator>) {
-  return (
-    <SelectPrimitive.Separator
-      data-slot="select-separator"
-      className={cn("-mx-1 my-1 h-px bg-border", className)}
-      {...props}
-    />
-  )
-}
-
-function SelectScrollUpButton({
-  className,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.ScrollUpButton>) {
-  return (
-    <SelectPrimitive.ScrollUpButton
-      data-slot="select-scroll-up-button"
-      className={cn("flex cursor-default items-center justify-center py-1", className)}
-      {...props}
-    >
-      <ChevronUpIcon className="size-4" />
-    </SelectPrimitive.ScrollUpButton>
-  )
-}
-
-function SelectScrollDownButton({
-  className,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.ScrollDownButton>) {
-  return (
-    <SelectPrimitive.ScrollDownButton
-      data-slot="select-scroll-down-button"
-      className={cn("flex cursor-default items-center justify-center py-1", className)}
-      {...props}
-    >
-      <ChevronDownIcon className="size-4" />
-    </SelectPrimitive.ScrollDownButton>
-  )
+/** @deprecated Inline select no longer uses scroll buttons */
+function SelectScrollDownButton() {
+  return null;
 }
 
 export {
@@ -198,4 +311,4 @@ export {
   SelectSeparator,
   SelectTrigger,
   SelectValue,
-}
+};

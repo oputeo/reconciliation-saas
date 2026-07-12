@@ -67,7 +67,7 @@ export default function ForecastPage({ startDate = "2025-01-01", endDate = "2026
         <CardContent className="flex gap-6 items-end">
           <div>
             <label className="text-sm font-medium block mb-2">Forecast Period</label>
-            <Select value={forecastPeriod} onValueChange={(v: "3" | "6") => setForecastPeriod(v)}>
+            <Select value={forecastPeriod} onValueChange={(v) => setForecastPeriod(v as '3' | '6')}>
               <SelectTrigger className="w-72">
                 <SelectValue />
               </SelectTrigger>

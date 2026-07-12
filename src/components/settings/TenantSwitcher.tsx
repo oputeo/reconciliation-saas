@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Building2, ChevronDown } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/app/providers';
 import { callAdminApi, getActiveTenantId, setActiveTenantId } from '@/lib/settings/adminApi';
@@ -65,7 +65,6 @@ export default function TenantSwitcher({ onSwitch }: { onSwitch?: () => void }) 
           ))}
         </SelectContent>
       </Select>
-      <ChevronDown className="h-4 w-4 text-slate-400 -ml-6 pointer-events-none hidden sm:block" />
     </div>
   );
 }
