@@ -49,8 +49,6 @@ const quickAccess = [
 ];
 
 function useSidebarState() {
-  const [isClient, setIsClient] = useState(false);
-
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
 
@@ -59,21 +57,16 @@ function useSidebarState() {
   const { profile, signOut, hasPermission, loading } = useAuth();
   const { tenantName } = useActiveTenant();
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  const showAuthUi = isClient && !loading;
-  const isAdmin = showAuthUi && hasPermission('admin');
-  const activeTab = isClient ? searchParams.get('tab') : null;
+  const isAdmin = !loading && hasPermission('admin');
+  const activeTab = searchParams.get('tab');
 
   const currentUser = {
-    name: showAuthUi
+    name: !loading
       ? profile?.full_name || profile?.email?.split('@')[0] || 'User'
       : 'User',
-    role: showAuthUi ? profile?.role || 'viewer' : 'viewer',
-    tenant: showAuthUi ? tenantName || profile?.tenant_name || 'Workspace' : 'Workspace',
-    avatar: showAuthUi ? profile?.avatar_url || '' : '',
+    role: !loading ? profile?.role || 'viewer' : 'viewer',
+    tenant: !loading ? tenantName || profile?.tenant_name || 'Workspace' : 'Workspace',
+    avatar: !loading ? profile?.avatar_url || '' : '',
   };
 
   const handleLogout = async () => {
@@ -92,8 +85,22 @@ function useSidebarState() {
   };
 }
 
-/** Desktop nav body — rendered inside AppShell flex column (in document flow). */
+/** Desktop nav body — rendered inside AppShell grid column (in document flow). */
 export function SidebarNav() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <SidebarNavFallback />;
+  }
+
+  return <SidebarNavContent />;
+}
+
+function SidebarNavContent() {
   const {
     collapsed,
     toggleSidebar,

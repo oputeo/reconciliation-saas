@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { SidebarNav, SidebarNavFallback } from '@/components/layout/Sidebar';
 import { SIDEBAR_WIDTH_COLLAPSED, SIDEBAR_WIDTH_EXPANDED, useUIStore } from '@/store/uiStore';
@@ -17,13 +17,20 @@ function isPublicPath(pathname: string): boolean {
 
 function AuthenticatedShell({ children }: { children: React.ReactNode }) {
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
-  const sidebarWidth = collapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const sidebarWidth = mounted && collapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED;
 
   return (
     <div className="min-h-screen w-full min-w-0 overflow-x-hidden bg-slate-50">
       <div
         className="app-shell-layout"
         style={{ ['--sidebar-width' as string]: `${sidebarWidth}px` }}
+        suppressHydrationWarning
       >
         <aside className="app-shell-sidebar" aria-label="Main navigation">
           <Suspense fallback={<SidebarNavFallback />}>

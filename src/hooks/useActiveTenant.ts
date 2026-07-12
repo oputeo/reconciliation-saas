@@ -48,9 +48,15 @@ export function useActiveTenant() {
     };
   }, [user?.id, profileTenant, loading]);
 
+  // Avoid reading sessionStorage during render — prevents React hydration mismatch (#418).
+  const [storedTenantId, setStoredTenantId] = useState<string | null>(null);
+  useEffect(() => {
+    setStoredTenantId(getActiveTenantId());
+  }, []);
+
   const tenantId = useMemo(() => {
-    return validatedTenantId || profileTenant || getActiveTenantId() || FALLBACK_TENANT_ID;
-  }, [validatedTenantId, profileTenant]);
+    return validatedTenantId || profileTenant || storedTenantId || FALLBACK_TENANT_ID;
+  }, [validatedTenantId, profileTenant, storedTenantId]);
 
   useEffect(() => {
     if (validatedTenantId) setActiveTenantId(validatedTenantId);
