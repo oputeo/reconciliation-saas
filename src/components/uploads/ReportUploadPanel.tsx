@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ExpandableOptionPicker } from '@/components/ui/expandable-option-picker';
-import { Upload } from 'lucide-react';
+import { Upload, AlertTriangle } from 'lucide-react';
 import { invokeUploadFunction } from '@/lib/edgeFunctions';
+import {
+  classifyUploadError,
+  uploadErrorGuidance,
+} from '@/lib/ingest/uploadApi';
 import { toast } from 'sonner';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
 import {
@@ -23,12 +27,25 @@ const SIDE_LABELS: Record<ReportSide, string> = {
   exception: 'Exception — chargebacks',
 };
 
+export type UploadPreset = {
+  reportType?: ReportType;
+  reportSide?: ReportSide;
+  filenameHint?: string;
+};
+
 type Props = {
   onSuccess?: () => void;
   compact?: boolean;
+  preset?: UploadPreset | null;
+  onPresetConsumed?: () => void;
 };
 
-export default function ReportUploadPanel({ onSuccess, compact }: Props) {
+export default function ReportUploadPanel({
+  onSuccess,
+  compact,
+  preset,
+  onPresetConsumed,
+}: Props) {
   const { tenantId, isReady } = useActiveTenant();
   const [reportType, setReportType] = useState<ReportType>('generic');
   const [reportSide, setReportSide] = useState<ReportSide>('internal');
@@ -36,6 +53,15 @@ export default function ReportUploadPanel({ onSuccess, compact }: Props) {
   const [uploading, setUploading] = useState(false);
   const [reportTypeOpen, setReportTypeOpen] = useState(false);
   const [reportSideOpen, setReportSideOpen] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!preset) return;
+    if (preset.reportType) setReportType(preset.reportType);
+    if (preset.reportSide) setReportSide(preset.reportSide);
+    setLastError(null);
+    onPresetConsumed?.();
+  }, [preset, onPresetConsumed]);
 
   const selected = useMemo(
     () => REPORT_TYPES.find((r) => r.id === reportType) ?? REPORT_TYPES[0],
@@ -46,6 +72,7 @@ export default function ReportUploadPanel({ onSuccess, compact }: Props) {
   const sideIsLocked = selected.allowedSides.length === 1;
   const phase1 = REPORT_TYPES.filter((r) => r.phase === 1);
   const phase2 = REPORT_TYPES.filter((r) => r.phase === 2);
+  const errorKind = lastError ? classifyUploadError(lastError) : null;
 
   const onTypeChange = (value: ReportType) => {
     setReportType(value);
@@ -58,6 +85,7 @@ export default function ReportUploadPanel({ onSuccess, compact }: Props) {
     if (!file) return toast.error('Select a CSV file first');
 
     setUploading(true);
+    setLastError(null);
     const formData = new FormData();
     formData.append('file', file);
     formData.append('tenant_id', tenantId);
@@ -77,7 +105,9 @@ export default function ReportUploadPanel({ onSuccess, compact }: Props) {
       setFile(null);
       onSuccess?.();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Upload failed');
+      const message = err instanceof Error ? err.message : 'Upload failed';
+      setLastError(message);
+      toast.error(message);
     } finally {
       setUploading(false);
     }
@@ -97,10 +127,31 @@ export default function ReportUploadPanel({ onSuccess, compact }: Props) {
         </h2>
         {!compact && (
           <p className="text-sm text-muted-foreground">
-            Map a CSV into the master ledger, then run collective reconciliation.
+            Ingest report CSVs into the master ledger, then run collective reconciliation.
           </p>
         )}
       </div>
+
+      {lastError && (
+        <div className="max-w-xl rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm space-y-2">
+          <div className="flex items-start gap-2 text-amber-950">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+            <div>
+              <p className="font-semibold">Upload failed</p>
+              <p className="mt-1 text-amber-900">{lastError}</p>
+              {errorKind && (
+                <p className="mt-2 text-amber-800">{uploadErrorGuidance(errorKind)}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {preset?.filenameHint && (
+        <p className="text-sm text-emerald-700 font-medium max-w-xl">
+          Re-upload ready — use the same file: {preset.filenameHint}
+        </p>
+      )}
 
       <div className="space-y-6 max-w-xl">
         <div className="space-y-2">
