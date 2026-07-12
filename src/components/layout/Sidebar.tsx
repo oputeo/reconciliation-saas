@@ -53,9 +53,6 @@ function useSidebarState() {
 
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
-  const isMobileOpen = useUIStore((s) => s.mobileSidebarOpen);
-  const setMobileSidebarOpen = useUIStore((s) => s.setMobileSidebarOpen);
-  const toggleMobileSidebar = useUIStore((s) => s.toggleMobileSidebar);
 
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -65,10 +62,6 @@ function useSidebarState() {
   useEffect(() => {
     setIsClient(true);
   }, []);
-
-  useEffect(() => {
-    setMobileSidebarOpen(false);
-  }, [pathname, searchParams, setMobileSidebarOpen]);
 
   const showAuthUi = isClient && !loading;
   const isAdmin = showAuthUi && hasPermission('admin');
@@ -91,9 +84,6 @@ function useSidebarState() {
   return {
     collapsed,
     toggleSidebar,
-    isMobileOpen,
-    setMobileSidebarOpen,
-    toggleMobileSidebar,
     pathname,
     activeTab,
     isAdmin,
@@ -107,7 +97,6 @@ export function SidebarNav() {
   const {
     collapsed,
     toggleSidebar,
-    setMobileSidebarOpen,
     pathname,
     activeTab,
     isAdmin,
@@ -158,7 +147,6 @@ export function SidebarNav() {
             <Link
               key={item.href}
               href={item.href}
-              onClick={() => setMobileSidebarOpen(false)}
               className={navLinkClass(isActive)}
               title={collapsed ? item.label : undefined}
             >
@@ -187,7 +175,7 @@ export function SidebarNav() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={() => setMobileSidebarOpen(false)}
+
                   className={navLinkClass(!!isActive)}
                 >
                   <item.icon size={18} className="shrink-0" />
@@ -198,7 +186,7 @@ export function SidebarNav() {
 
             <Link
               href="/settings"
-              onClick={() => setMobileSidebarOpen(false)}
+
               className={navLinkClass(pathname.startsWith('/settings'))}
             >
               <Settings size={18} className="shrink-0" />
@@ -208,7 +196,7 @@ export function SidebarNav() {
             {isAdmin && (
               <Link
                 href="/settings/tenants"
-                onClick={() => setMobileSidebarOpen(false)}
+  
                 className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all text-slate-500 hover:bg-slate-100"
                 title={`Active workspace: ${currentUser.tenant}`}
               >
@@ -220,7 +208,7 @@ export function SidebarNav() {
             {isAdmin && (
               <Link
                 href="/admin/roles"
-                onClick={() => setMobileSidebarOpen(false)}
+  
                 className={navLinkClass(pathname === '/admin/roles')}
               >
                 <Users size={18} className="shrink-0" />
@@ -270,194 +258,6 @@ export function SidebarNavFallback() {
       </div>
       <div className="h-20 border-t bg-slate-100" />
     </div>
-  );
-}
-
-/** Mobile hamburger + overlay drawer (does not affect desktop flex layout). */
-export function SidebarMobileChrome() {
-  const {
-    isMobileOpen,
-    toggleMobileSidebar,
-    setMobileSidebarOpen,
-    pathname,
-    activeTab,
-    isAdmin,
-    currentUser,
-    handleLogout,
-  } = useSidebarState();
-
-  return (
-    <>
-      <Button
-        variant="outline"
-        size="icon"
-        className="fixed top-4 left-4 z-[300] lg:hidden bg-white border border-slate-300 shadow-xl hover:bg-slate-50"
-        onClick={toggleMobileSidebar}
-        aria-label="Toggle navigation"
-      >
-        <span className="text-2xl">☰</span>
-      </Button>
-
-      <aside
-        className={`lg:hidden fixed top-0 left-0 z-[250] h-screen flex flex-col bg-white border-r border-slate-200 shadow-2xl transition-transform duration-300 ease-in-out w-[288px] ${
-          isMobileOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-        aria-label="Mobile navigation"
-      >
-        <MobileSidebarBody
-          pathname={pathname}
-          activeTab={activeTab}
-          isAdmin={isAdmin}
-          currentUser={currentUser}
-          onNavigate={() => setMobileSidebarOpen(false)}
-          onLogout={handleLogout}
-        />
-      </aside>
-
-      {isMobileOpen && (
-        <div
-          className="fixed inset-0 bg-black/60 z-[240] lg:hidden"
-          onClick={() => setMobileSidebarOpen(false)}
-          aria-hidden
-        />
-      )}
-    </>
-  );
-}
-
-function MobileSidebarBody({
-  pathname,
-  activeTab,
-  isAdmin,
-  currentUser,
-  onNavigate,
-  onLogout,
-}: {
-  pathname: string;
-  activeTab: string | null;
-  isAdmin: boolean;
-  currentUser: { name: string; role: string; tenant: string; avatar: string };
-  onNavigate: () => void;
-  onLogout: () => void;
-}) {
-  const navLinkClass = (isActive: boolean) =>
-    `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
-      isActive
-        ? 'bg-emerald-600 text-white shadow-sm'
-        : 'text-slate-700 hover:bg-slate-100'
-    }`;
-
-  return (
-    <>
-      <div className="h-20 px-6 border-b flex items-center gap-3 bg-white shrink-0">
-        <div className="w-10 h-10 rounded-2xl bg-emerald-600 flex items-center justify-center shadow">
-          <span className="text-white font-bold text-2xl">R</span>
-        </div>
-        <div>
-          <h1 className="font-bold text-xl tracking-tight">ReconFlow</h1>
-          <p className="text-xs text-emerald-600 -mt-1">Revenue Assurance</p>
-        </div>
-      </div>
-
-      <nav className="flex-1 overflow-y-auto px-3 py-6 space-y-1">
-        {mainNav.map((item) => {
-          const isActive =
-            item.href === '/'
-              ? pathname === '/'
-              : pathname === item.href || pathname.startsWith(`${item.href}/`);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={navLinkClass(isActive)}
-            >
-              <item.icon size={20} className="shrink-0" />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-
-        <div className="px-4 mt-8 mb-2">
-          <p className="text-xs font-semibold text-slate-500 tracking-widest">
-            QUICK ACCESS
-          </p>
-        </div>
-        {quickAccess.map((item) => {
-          const tabParam = item.href.includes('?tab=')
-            ? item.href.split('=')[1]
-            : null;
-          const isActive =
-            (pathname === '/executive' && activeTab === tabParam) ||
-            pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={navLinkClass(!!isActive)}
-            >
-              <item.icon size={18} className="shrink-0" />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-
-        <Link
-          href="/settings"
-          onClick={onNavigate}
-          className={navLinkClass(pathname.startsWith('/settings'))}
-        >
-          <Settings size={18} className="shrink-0" />
-          <span>Settings</span>
-        </Link>
-
-        {isAdmin && (
-          <Link
-            href="/settings/tenants"
-            onClick={onNavigate}
-            className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-500 hover:bg-slate-100"
-          >
-            <Building2 size={18} className="shrink-0" />
-            <span className="truncate">{currentUser.tenant}</span>
-          </Link>
-        )}
-
-        {isAdmin && (
-          <Link
-            href="/admin/roles"
-            onClick={onNavigate}
-            className={navLinkClass(pathname === '/admin/roles')}
-          >
-            <Users size={18} className="shrink-0" />
-            <span>Role Management</span>
-          </Link>
-        )}
-      </nav>
-
-      <Separator />
-
-      <div className="p-4 bg-slate-50 border-t border-slate-100 shrink-0">
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-3 h-auto p-3 rounded-xl hover:bg-white"
-          onClick={onLogout}
-        >
-          <Avatar className="h-10 w-10 border border-slate-200">
-            <AvatarImage src={currentUser.avatar} />
-            <AvatarFallback className="bg-emerald-100 text-emerald-700 font-medium">
-              {currentUser.name.substring(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="text-left truncate">
-            <p className="font-medium">{currentUser.name}</p>
-            <p className="text-xs text-emerald-600 capitalize">
-              {currentUser.role} · {currentUser.tenant}
-            </p>
-          </div>
-        </Button>
-      </div>
-    </>
   );
 }
 

@@ -2,11 +2,7 @@
 
 import { Suspense } from 'react';
 import { usePathname } from 'next/navigation';
-import {
-  SidebarMobileChrome,
-  SidebarNav,
-  SidebarNavFallback,
-} from '@/components/layout/Sidebar';
+import { SidebarNav, SidebarNavFallback } from '@/components/layout/Sidebar';
 import { SIDEBAR_WIDTH_COLLAPSED, SIDEBAR_WIDTH_EXPANDED, useUIStore } from '@/store/uiStore';
 
 const PUBLIC_EXACT = new Set(['/']);
@@ -25,8 +21,6 @@ function AuthenticatedShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen w-full min-w-0 overflow-x-hidden bg-slate-50">
-      <SidebarMobileChrome />
-
       <div
         className="app-shell-layout"
         style={{ ['--sidebar-width' as string]: `${sidebarWidth}px` }}
