@@ -2,8 +2,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import Sidebar from "@/components/layout/Sidebar";
-import { useUIStore } from "@/store/uiStore";
+
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,8 +38,6 @@ const allTransactions: Transaction[] = [
 ];
 
 export default function TransactionsPage() {
-  const { sidebarCollapsed } = useUIStore();
-
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [sourceFilter, setSourceFilter] = useState("All");
@@ -126,11 +123,7 @@ export default function TransactionsPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
-      <Sidebar />
-
-      <main className={`flex-1 transition-all duration-300 p-8 ${sidebarCollapsed ? "ml-28" : "ml-72"}`}>
-        <div className="max-w-7xl mx-auto">
+    <div className="mx-auto max-w-7xl w-full min-w-0">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div>
               <h1 className="text-3xl lg:text-4xl font-bold tracking-tight">All Transactions</h1>
@@ -248,8 +241,6 @@ export default function TransactionsPage() {
               </Button>
             </div>
           </Card>
-        </div>
-      </main>
     </div>
   );
 }

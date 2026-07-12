@@ -8,23 +8,78 @@ body {
 }
 
 /*
-  Authenticated shell: in-flow sidebar column + flex main (see AppShell.tsx).
+  ReconFlow authenticated shell — CSS grid reserves sidebar column on desktop.
+  Avoid Tailwind hidden/lg:flex on structural layout (unreliable in some builds).
 */
-.app-shell-sidebar {
-  flex-shrink: 0;
+.app-shell-layout {
+  display: grid;
+  width: 100%;
+  min-height: 100vh;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 1fr;
 }
 
-.app-shell-main {
-  width: 100%;
-  max-width: 100%;
+.app-shell-sidebar {
+  display: none;
   min-width: 0;
 }
 
+.app-shell-main {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-top: 3.5rem; /* mobile top bar space */
+}
+
+.app-shell-main-inner {
+  min-height: 100%;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 1rem 1rem 5rem;
+}
+
+@media (min-width: 640px) {
+  .app-shell-main-inner {
+    padding: 1.5rem 1.5rem 5rem;
+  }
+}
+
 @media (min-width: 1024px) {
+  .app-shell-layout {
+    grid-template-columns: var(--sidebar-width, 288px) minmax(0, 1fr);
+  }
+
+  .app-shell-sidebar {
+    display: flex;
+    flex-direction: column;
+    grid-column: 1;
+    grid-row: 1;
+    width: var(--sidebar-width, 288px);
+    max-width: var(--sidebar-width, 288px);
+    min-height: 100vh;
+    position: sticky;
+    top: 0;
+    align-self: start;
+    z-index: 40;
+    overflow: hidden;
+    background: #fff;
+    border-right: 1px solid #e2e8f0;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    transition: width 300ms ease-in-out, max-width 300ms ease-in-out;
+  }
+
   .app-shell-main {
-    width: auto;
-    flex: 1 1 0%;
-    max-width: 100%;
+    grid-column: 2;
+    padding-top: 0;
+  }
+
+  .app-shell-main-inner {
+    padding: 2rem 2rem 5rem;
   }
 }
 

@@ -27,23 +27,18 @@ function AuthenticatedShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen w-full min-w-0 overflow-x-hidden bg-slate-50">
       <SidebarMobileChrome />
 
-      {/*
-        Desktop: sidebar is a direct flex child (in document flow, not fixed).
-        Main content starts immediately after the sidebar column — no overlap possible.
-      */}
-      <div className="flex min-h-screen w-full min-w-0">
-        <aside
-          className="app-shell-sidebar hidden shrink-0 flex-col bg-white border-r border-slate-200 shadow-sm transition-[width] duration-300 ease-in-out overflow-hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:max-h-screen lg:z-40"
-          style={{ width: sidebarWidth }}
-          aria-label="Main navigation"
-        >
+      <div
+        className="app-shell-layout"
+        style={{ ['--sidebar-width' as string]: `${sidebarWidth}px` }}
+      >
+        <aside className="app-shell-sidebar" aria-label="Main navigation">
           <Suspense fallback={<SidebarNavFallback />}>
             <SidebarNav />
           </Suspense>
         </aside>
 
-        <main className="app-shell-main min-h-screen min-w-0 flex-1 overflow-x-hidden overflow-y-auto pt-14 lg:pt-0">
-          <div className="min-h-full w-full min-w-0 max-w-full p-4 sm:p-6 lg:p-8 pb-20">
+        <main className="app-shell-main">
+          <div className="app-shell-main-inner">
             {children}
           </div>
         </main>
