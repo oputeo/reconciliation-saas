@@ -251,9 +251,9 @@ export default function Sidebar() {
         <span className="text-2xl">☰</span>
       </Button>
 
-      {/* Desktop: in-flow sidebar — main content flexes beside it (no overlap on expand) */}
+      {/* Desktop: fixed sidebar — AppShell main uses matching left offset */}
       <aside
-        className="hidden lg:flex sticky top-0 z-40 h-screen shrink-0 flex-col bg-white border-r border-slate-200 transition-[width] duration-300 ease-in-out overflow-hidden"
+        className="hidden lg:flex fixed top-0 left-0 z-40 h-screen shrink-0 flex-col bg-white border-r border-slate-200 transition-[width] duration-300 ease-in-out overflow-hidden"
         style={{ width: widthPx }}
         aria-label="Main navigation"
       >

@@ -8,8 +8,8 @@ body {
 }
 
 /*
-  Authenticated shell: desktop uses flex row (sidebar + main).
-  Main never sits under the sidebar when it expands/collapses.
+  Authenticated shell: desktop sidebar is fixed; main content offsets by --sidebar-width.
+  Prevents dashboard content from sitting under an expanded sidebar.
 */
 .app-shell-main {
   width: 100%;
@@ -17,10 +17,14 @@ body {
 }
 
 @media (min-width: 1024px) {
-  .app-shell-main {
-    width: auto;
-    flex: 1 1 0%;
-    min-width: 0;
+  .app-shell-main[data-sidebar-offset='true'] {
+    margin-left: var(--sidebar-width, 288px);
+    width: calc(100% - var(--sidebar-width, 288px));
+    max-width: calc(100% - var(--sidebar-width, 288px));
+    transition:
+      margin-left 300ms ease-in-out,
+      width 300ms ease-in-out,
+      max-width 300ms ease-in-out;
   }
 }
 
