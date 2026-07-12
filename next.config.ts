@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ['10.199.220.251', 'localhost', '127.0.0.1'],
   reactStrictMode: true,
 
+  // Sentry merges trace meta into the HTML head; keep off to avoid hydration drift.
+  experimental: {
+    clientTraceMetadata: [],
+  },
+
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },

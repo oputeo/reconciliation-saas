@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import "./globals.css";
 import { ClientToaster } from "@/components/ui/client-toaster";
 import { AuthProvider } from "./providers";
@@ -33,9 +32,7 @@ export default function RootLayout({
         
         <AuthProvider>
           <RuleEngineProvider>
-            <Suspense fallback={<div className="min-h-screen" />}>
-              <AppShell>{children}</AppShell>
-            </Suspense>
+            <AppShell>{children}</AppShell>
           </RuleEngineProvider>
         </AuthProvider>
 

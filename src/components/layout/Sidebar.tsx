@@ -1,26 +1,17 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { Suspense } from 'react';
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   RefreshCw,
   AlertTriangle,
   FileBarChart,
-  TrendingUp,
-  Shield,
   Upload,
   ChevronLeft,
   ChevronRight,
   BarChart3,
-  Eye,
-  History,
-  Link as LinkIcon,
-  Users,
-  Target,
-  Settings,
-  Building2,
 } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -29,6 +20,10 @@ import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/app/providers';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { useUIStore } from '@/store/uiStore';
+import {
+  SidebarQuickAccess,
+  SidebarQuickAccessFallback,
+} from '@/components/layout/SidebarQuickAccess';
 
 const mainNav = [
   { href: '/', label: 'Home', icon: LayoutDashboard },
@@ -39,26 +34,15 @@ const mainNav = [
   { href: '/reports', label: 'Reports & Exports', icon: FileBarChart },
 ];
 
-const quickAccess = [
-  { href: '/executive?tab=forecast', label: 'Forecasting', icon: TrendingUp },
-  { href: '/executive?tab=products', label: 'Product Audit', icon: Eye },
-  { href: '/executive?tab=back-audit', label: 'Back Audit', icon: History },
-  { href: '/control-gate', label: 'Control Gate', icon: Shield },
-  { href: '/api-docs', label: 'API Documentation', icon: LinkIcon },
-  { href: '/resolver', label: 'AI Resolver', icon: Target },
-];
-
 function useSidebarState() {
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
 
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { profile, signOut, hasPermission, loading } = useAuth();
   const { tenantName } = useActiveTenant();
 
   const isAdmin = !loading && hasPermission('admin');
-  const activeTab = searchParams.get('tab');
 
   const currentUser = {
     name: !loading
@@ -78,7 +62,6 @@ function useSidebarState() {
     collapsed,
     toggleSidebar,
     pathname,
-    activeTab,
     isAdmin,
     currentUser,
     handleLogout,
@@ -87,16 +70,6 @@ function useSidebarState() {
 
 /** Desktop nav body — rendered inside AppShell grid column (in document flow). */
 export function SidebarNav() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return <SidebarNavFallback />;
-  }
-
   return <SidebarNavContent />;
 }
 
@@ -105,7 +78,6 @@ function SidebarNavContent() {
     collapsed,
     toggleSidebar,
     pathname,
-    activeTab,
     isAdmin,
     currentUser,
     handleLogout,
@@ -164,65 +136,14 @@ function SidebarNavContent() {
         })}
 
         {!collapsed && (
-          <>
-            <div className="px-4 mt-8 mb-2">
-              <p className="text-xs font-semibold text-slate-500 tracking-widest">
-                QUICK ACCESS
-              </p>
-            </div>
-            {quickAccess.map((item) => {
-              const tabParam = item.href.includes('?tab=')
-                ? item.href.split('=')[1]
-                : null;
-              const isActive =
-                (pathname === '/executive' && activeTab === tabParam) ||
-                pathname === item.href;
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-
-                  className={navLinkClass(!!isActive)}
-                >
-                  <item.icon size={18} className="shrink-0" />
-                  <span className="truncate">{item.label}</span>
-                </Link>
-              );
-            })}
-
-            <Link
-              href="/settings"
-
-              className={navLinkClass(pathname.startsWith('/settings'))}
-            >
-              <Settings size={18} className="shrink-0" />
-              <span>Settings</span>
-            </Link>
-
-            {isAdmin && (
-              <Link
-                href="/settings/tenants"
-  
-                className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all text-slate-500 hover:bg-slate-100"
-                title={`Active workspace: ${currentUser.tenant}`}
-              >
-                <Building2 size={18} className="shrink-0" />
-                <span className="truncate">{currentUser.tenant}</span>
-              </Link>
-            )}
-
-            {isAdmin && (
-              <Link
-                href="/admin/roles"
-  
-                className={navLinkClass(pathname === '/admin/roles')}
-              >
-                <Users size={18} className="shrink-0" />
-                <span>Role Management</span>
-              </Link>
-            )}
-          </>
+          <Suspense fallback={<SidebarQuickAccessFallback />}>
+            <SidebarQuickAccess
+              pathname={pathname}
+              isAdmin={isAdmin}
+              tenantLabel={currentUser.tenant}
+              navLinkClass={navLinkClass}
+            />
+          </Suspense>
         )}
       </nav>
 

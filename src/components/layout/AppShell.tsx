@@ -1,9 +1,10 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense } from 'react';
 import { usePathname } from 'next/navigation';
 import { SidebarNav, SidebarNavFallback } from '@/components/layout/Sidebar';
 import { SIDEBAR_WIDTH_COLLAPSED, SIDEBAR_WIDTH_EXPANDED, useUIStore } from '@/store/uiStore';
+import { useIsClient } from '@/lib/useIsClient';
 
 const PUBLIC_EXACT = new Set(['/']);
 const PUBLIC_PREFIXES = ['/login', '/sign-in', '/accept-invite', '/access-denied'];
@@ -17,13 +18,9 @@ function isPublicPath(pathname: string): boolean {
 
 function AuthenticatedShell({ children }: { children: React.ReactNode }) {
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const sidebarWidth = mounted && collapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED;
+  const isClient = useIsClient();
+  const sidebarWidth =
+    isClient && collapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED;
 
   return (
     <div className="min-h-screen w-full min-w-0 overflow-x-hidden bg-slate-50">
