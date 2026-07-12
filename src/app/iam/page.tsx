@@ -95,6 +95,18 @@ export default function IAMPage() {
           </div>
         </div>
 
+        <div className="mb-8 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-950">
+          <p className="font-semibold">Demo sample data only</p>
+          <p className="mt-1 text-amber-900">
+            The users below (Moniepoint names) are placeholders for UI rehearsal — they are not your live ReconFlow account.
+            To switch workspace for the SmartDelta demo, use{" "}
+            <a href="/settings/tenants" className="underline font-medium">Settings → Workspaces</a>.
+            To manage real invites and roles, use{" "}
+            <a href="/settings/users" className="underline font-medium">Settings → Users &amp; Teams</a>{" "}
+            or <a href="/admin/roles" className="underline font-medium">Role Management</a>.
+          </p>
+        </div>
+
         {/* Top Clickable Buttons */}
         <div className="flex flex-wrap gap-3 mb-10 justify-center">
           {iamTabs.map((tab) => (

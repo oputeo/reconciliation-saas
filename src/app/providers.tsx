@@ -4,6 +4,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { fetchTenantMeta } from '@/lib/settings/tenant';
+import { getActiveTenantId } from '@/lib/settings/adminApi';
 import { hasMinRole, type AppRole } from '@/lib/settings/permissions';
 import { User } from '@supabase/supabase-js';
 
@@ -24,27 +25,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string, authUser?: User | null) => {
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('role, tenant_id')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle();
+    const activeTenantId = getActiveTenantId();
 
-    if (error) console.warn('Failed to load user role:', error.message);
+    let roleRow: { role: string; tenant_id: string } | null = null;
+
+    if (activeTenantId) {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role, tenant_id')
+        .eq('user_id', userId)
+        .eq('tenant_id', activeTenantId)
+        .maybeSingle();
+      if (error) console.warn('Failed to load active workspace role:', error.message);
+      roleRow = data;
+    }
+
+    if (!roleRow) {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role, tenant_id')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (error) console.warn('Failed to load user role:', error.message);
+      roleRow = data;
+    }
 
     let tenantName: string | null = null;
     let tenantPlan: string | null = null;
-    if (data?.tenant_id) {
-      const tenant = await fetchTenantMeta(data.tenant_id);
+    if (roleRow?.tenant_id) {
+      const tenant = await fetchTenantMeta(roleRow.tenant_id);
       tenantName = tenant.name;
       tenantPlan = tenant.plan;
     }
 
     setProfile({
-      role: data?.role || 'viewer',
-      tenant_id: data?.tenant_id,
+      role: roleRow?.role || 'viewer',
+      tenant_id: roleRow?.tenant_id,
       tenant_name: tenantName,
       tenant_plan: tenantPlan,
       full_name:

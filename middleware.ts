@@ -35,13 +35,14 @@ export async function middleware(req: NextRequest) {
 
   // Admin route protection
   if (isAdminRoute && session) {
-    const { data: userRole } = await supabase
+    const { data: adminRoles } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', session.user.id)
-      .single();
+      .eq('role', 'admin')
+      .limit(1);
 
-    if (!userRole || userRole.role !== 'admin') {
+    if (!adminRoles?.length) {
       return NextResponse.redirect(new URL('/executive', req.url));
     }
   }
