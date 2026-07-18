@@ -1,23 +1,29 @@
 // src/components/layout/Header.tsx
-"use client";
+'use client';
 
-import { Menu } from "lucide-react";
-import { useUIStore } from "@/store/uiStore";
+import { Menu } from 'lucide-react';
+import { useUIStore } from '@/store/uiStore';
+import { Button } from '@/components/ui/button';
 
 export default function Header() {
-  const { toggleSidebar } = useUIStore();
+  const toggleMobileSidebar = useUIStore((s) => s.toggleMobileSidebar);
 
   return (
-    <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 z-50 flex items-center px-6">
-      <button
-        onClick={toggleSidebar}
-        className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition"
+    <header className="app-shell-mobile-header">
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        onClick={toggleMobileSidebar}
+        className="shrink-0 border-slate-200 bg-white shadow-sm"
+        aria-label="Open navigation menu"
       >
-        <Menu className="w-6 h-6 text-slate-700 dark:text-slate-300" />
-      </button>
+        <Menu className="size-5 text-slate-700" />
+      </Button>
 
-      <div className="ml-4">
-        <h1 className="font-semibold text-lg text-slate-900 dark:text-white">ReconFlow</h1>
+      <div className="ml-3 min-w-0">
+        <h1 className="font-semibold text-lg text-slate-900 truncate">ReconFlow</h1>
+        <p className="text-xs text-emerald-600 -mt-0.5">Revenue Assurance</p>
       </div>
     </header>
   );

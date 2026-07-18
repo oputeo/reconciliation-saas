@@ -37,6 +37,7 @@ const mainNav = [
 function useSidebarState() {
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const setMobileSidebarOpen = useUIStore((s) => s.setMobileSidebarOpen);
 
   const pathname = usePathname();
   const { profile, signOut, hasPermission, loading } = useAuth();
@@ -53,7 +54,10 @@ function useSidebarState() {
     avatar: !loading ? profile?.avatar_url || '' : '',
   };
 
+  const closeMobileNav = () => setMobileSidebarOpen(false);
+
   const handleLogout = async () => {
+    closeMobileNav();
     await signOut();
     window.location.href = '/login';
   };
@@ -61,6 +65,7 @@ function useSidebarState() {
   return {
     collapsed,
     toggleSidebar,
+    closeMobileNav,
     pathname,
     isAdmin,
     currentUser,
@@ -68,7 +73,7 @@ function useSidebarState() {
   };
 }
 
-/** Desktop nav body — rendered inside AppShell grid column (in document flow). */
+/** Desktop nav body - rendered inside AppShell grid column (in document flow). */
 export function SidebarNav() {
   return <SidebarNavContent />;
 }
@@ -77,6 +82,7 @@ function SidebarNavContent() {
   const {
     collapsed,
     toggleSidebar,
+    closeMobileNav,
     pathname,
     isAdmin,
     currentUser,
@@ -88,12 +94,18 @@ function SidebarNavContent() {
       isActive
         ? 'bg-emerald-600 text-white shadow-sm'
         : 'text-slate-700 hover:bg-slate-100'
-    }`;
+    } ${collapsed ? 'justify-center px-2' : ''}`;
 
   return (
     <>
-      <div className="h-20 px-4 border-b flex items-center justify-between bg-white shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
+      <div
+        className={`border-b bg-white shrink-0 ${
+          collapsed
+            ? 'flex flex-col items-center gap-2 py-3 px-2'
+            : 'h-20 px-3 flex items-center justify-between gap-2'
+        }`}
+      >
+        <div className={`flex items-center gap-3 min-w-0 ${collapsed ? '' : 'flex-1'}`}>
           <div className="w-10 h-10 shrink-0 rounded-2xl bg-emerald-600 flex items-center justify-center shadow">
             <span className="text-white font-bold text-2xl">R</span>
           </div>
@@ -106,13 +118,15 @@ function SidebarNavContent() {
         </div>
 
         <Button
-          variant="ghost"
+          type="button"
+          variant="outline"
           size="icon"
-          className="shrink-0"
+          className="shrink-0 border-slate-200 bg-white shadow-sm z-10"
           onClick={toggleSidebar}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </Button>
       </div>
 
@@ -128,6 +142,7 @@ function SidebarNavContent() {
               href={item.href}
               className={navLinkClass(isActive)}
               title={collapsed ? item.label : undefined}
+              onClick={closeMobileNav}
             >
               <item.icon size={20} className="shrink-0" />
               {!collapsed && <span className="truncate">{item.label}</span>}
@@ -142,6 +157,7 @@ function SidebarNavContent() {
               isAdmin={isAdmin}
               tenantLabel={currentUser.tenant}
               navLinkClass={navLinkClass}
+              onNavigate={closeMobileNav}
             />
           </Suspense>
         )}
@@ -149,11 +165,15 @@ function SidebarNavContent() {
 
       <Separator />
 
-      <div className="p-4 bg-slate-50 border-t border-slate-100 shrink-0">
+      <div className={`bg-slate-50 border-t border-slate-100 shrink-0 ${collapsed ? 'p-2' : 'p-4'}`}>
         <Button
+          type="button"
           variant="ghost"
-          className="w-full justify-start gap-3 h-auto p-3 rounded-xl hover:bg-white"
+          className={`w-full h-auto rounded-xl hover:bg-white ${
+            collapsed ? 'justify-center p-2' : 'justify-start gap-3 p-3'
+          }`}
           onClick={handleLogout}
+          title="Sign out"
         >
           <Avatar className="h-10 w-10 border border-slate-200 shrink-0">
             <AvatarImage src={currentUser.avatar} />

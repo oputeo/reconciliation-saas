@@ -28,6 +28,7 @@ type Props = {
   isAdmin: boolean;
   tenantLabel: string;
   navLinkClass: (isActive: boolean) => string;
+  onNavigate?: () => void;
 };
 
 export function SidebarQuickAccess({
@@ -35,6 +36,7 @@ export function SidebarQuickAccess({
   isAdmin,
   tenantLabel,
   navLinkClass,
+  onNavigate,
 }: Props) {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get('tab');
@@ -59,6 +61,7 @@ export function SidebarQuickAccess({
             key={item.href}
             href={item.href}
             className={navLinkClass(!!isActive)}
+            onClick={onNavigate}
           >
             <item.icon size={18} className="shrink-0" />
             <span className="truncate">{item.label}</span>
@@ -69,6 +72,7 @@ export function SidebarQuickAccess({
       <Link
         href="/settings"
         className={navLinkClass(pathname.startsWith('/settings'))}
+        onClick={onNavigate}
       >
         <Settings size={18} className="shrink-0" />
         <span>Settings</span>
@@ -79,6 +83,7 @@ export function SidebarQuickAccess({
           href="/settings/tenants"
           className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all text-slate-500 hover:bg-slate-100"
           title={`Active workspace: ${tenantLabel}`}
+          onClick={onNavigate}
         >
           <Building2 size={18} className="shrink-0" />
           <span className="truncate">{tenantLabel}</span>
@@ -89,6 +94,7 @@ export function SidebarQuickAccess({
         <Link
           href="/admin/roles"
           className={navLinkClass(pathname === '/admin/roles')}
+          onClick={onNavigate}
         >
           <Users size={18} className="shrink-0" />
           <span>Role Management</span>
